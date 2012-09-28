@@ -5,7 +5,7 @@ Bakthat
 Compress, encrypt (symmetric encryption) and upload files directly to Amazon S3 in a single command. Can also be used as a python module.
 
 While navigating directories, I was tired of saying myself I should backup these #?!!* small files/directories.
-Since I didn't found any solution that allows me to quickly perform encrypted backup on Amazon S3 from command-line, I wrote bakthat !
+Since I didn't found any solution that allows me to perform quickly encrypted backup on Amazon S3 from command-line, I wrote bakthat !
 
 Here are some features:
 
