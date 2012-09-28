@@ -13,7 +13,7 @@ setup(
     description = "Compress, encrypt (symmetric encryption) and upload files directly to Amazon S3 in a single command. Can also be used as a python module.",
     license = "MIT",
     keywords = "aws s3 backup restore archive",
-    url = "",
+    url = "https://github.com/tsileo/bakthat",
     py_modules=['bakthat'],
     long_description= read('README.rst'),
     install_requires=[
