@@ -1,0 +1,9 @@
+*.pyc
+build/
+dist/
+bakthat.egg-info/
+.sass-cache
+.DS_Store
+*tar.gz
+*.zip
+.pypirc
