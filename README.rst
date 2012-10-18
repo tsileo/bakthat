@@ -146,7 +146,7 @@ And here is how to restore the glacier inventory from S3:
 
 ::
 
-    bakthat restore_glacier_inventory
+    $ bakthat restore_glacier_inventory
 
 
 As a module
