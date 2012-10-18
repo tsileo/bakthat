@@ -7,12 +7,12 @@ def read(fname):
 
 setup(
     name = "bakthat",
-    version = "0.1.1",
+    version = "0.2.0",
     author = "Thomas Sileo",
     author_email = "thomas.sileo@gmail.com",
-    description = "Compress, encrypt (symmetric encryption) and upload files directly to Amazon S3 in a single command. Can also be used as a python module.",
+    description = "Compress, encrypt (symmetric encryption) and upload files directly to Amazon S3/Glacier in a single command. Can also be used as a python module.",
     license = "MIT",
-    keywords = "aws s3 backup restore archive",
+    keywords = "aws s3 glacier backup restore archive",
     url = "https://github.com/tsileo/bakthat",
     py_modules=['bakthat'],
     long_description= read('README.rst'),
@@ -27,6 +27,6 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python",
     ],
-    scripts = ["bakthat.py"],
+    scripts=["bakthat.py"],
     zip_safe=False,
 )
