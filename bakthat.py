@@ -82,6 +82,12 @@ class S3Backend:
     def ls(self):
         return [key.name for key in self.bucket.get_all_keys()]
 
+    def delete(self, keyname):
+        k = Key(self.bucket)
+        k.key = keyname
+        self.bucket.delete_key(k)
+
+
 
 class GlacierBackend:
     """
@@ -126,7 +132,7 @@ class GlacierBackend:
         k.key = self.backup_key
 
         k.set_contents_from_string(json.dumps(archives))
-        print json.dumps(archives)
+
         k.set_acl("private")
 
 
@@ -138,7 +144,6 @@ class GlacierBackend:
         k = Key(s3_bucket)
         k.key = self.backup_key
 
-        print json.loads(k.get_contents_as_string())
         loaded_archives = json.loads(k.get_contents_as_string())
 
         with glacier_shelve() as d:
@@ -229,6 +234,23 @@ class GlacierBackend:
 
             return d["archives"].keys()
 
+    def delete(self, keyname):
+        archive_id = self.get_archive_id(keyname)
+        if archive_id:
+            self.vault.delete_archive(archive_id)
+            with glacier_shelve() as d:
+                archives = d["archives"]
+
+                if keyname in archives:
+                    del archives[keyname]
+
+                d["archives"] = archives
+
+            self.backup_inventory()
+
+
+
+
 storage_backends = dict(s3=S3Backend, glacier=GlacierBackend)
 
 @app.cmd(help="Backup a file or a directory, backup the current directory if no arg is provided.")
@@ -242,15 +264,15 @@ def backup(filename, destination="s3", **kwargs):
     log.info("Backing up " + filename)
     arcname = filename.split("/")[-1]
     
-    out = tempfile.TemporaryFile()
-    with tarfile.open(fileobj=out, mode="w:gz") as tar:
-        tar.add(filename, arcname=arcname)
-
     password = kwargs.get("password")
     if not password:
         password = getpass()
 
-    encrypted_out = StringIO()
+    out = tempfile.TemporaryFile()
+    with tarfile.open(fileobj=out, mode="w:gz") as tar:
+        tar.add(filename, arcname=arcname)
+
+    encrypted_out = tempfile.TemporaryFile()
     encrypt(out, encrypted_out, password)
     encrypted_out.seek(0)
 
@@ -291,13 +313,14 @@ def restore(filename, destination="s3", **kwargs):
     key_name = sorted(keys, reverse=True)[0]
     log.info("Restoring " + key_name)
 
-    encrypted_out = storage_backend.download(key_name)
-
-    if encrypted_out:
+    if key_name:
         password = kwargs.get("password")
         if not password:
             password = getpass()
 
+    encrypted_out = storage_backend.download(key_name)
+
+    if encrypted_out:
         out = tempfile.TemporaryFile()
         decrypt(encrypted_out, out, password)
         out.seek(0)
@@ -305,7 +328,29 @@ def restore(filename, destination="s3", **kwargs):
         tar = tarfile.open(fileobj=out)
         tar.extractall()
         tar.close()
-        return True
+
+
+@app.cmd(help="Delete a backup.")
+@app.cmd_arg('-f', '--filename', type=str, default="")
+@app.cmd_arg('-d', '--destination', type=str, default="s3", help="s3|glacier")
+def delete(filename, destination="s3", **kwargs):
+    log = kwargs.get("logger", app_logger)
+    conf = kwargs.get("conf", None)
+    storage_backend = storage_backends[destination](conf, log)
+
+    if not filename:
+        log.error("No file to delete, use -f to specify one.")
+        return
+
+    keys = [name for name in storage_backend.ls() if name.startswith(filename)]
+    if not keys:
+        log.error("No file matched.")
+        return
+
+    key_name = sorted(keys, reverse=True)[0]
+    log.info("Deleting " + key_name)
+
+    storage_backend.delete(key_name)
 
 
 @app.cmd(help="List stored backups.")

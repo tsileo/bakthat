@@ -9,7 +9,6 @@ Since I didn't found any solution that allows me to quickly perform encrypted ba
 
 Here are some features:
 
-* Hold everything in `StringIO <http://docs.python.org/library/stringio.html>`_ Objects
 * Compress with `tarfile <http://docs.python.org/library/tarfile.html>`_
 * Encrypt with `beefish <http://pypi.python.org/pypi/beefish>`_
 * Upload/download to S3 or Glacier with `boto <http://pypi.python.org/pypi/boto>`_
@@ -169,6 +168,12 @@ As a module
 
     # restore in the current working directory
     bakthat.restore("bak", logger=my_logger_instance, conf=aws_conf)
+
+
+Contributors
+============
+
+- Eric Chamberlain
 
 
 License (MIT)
