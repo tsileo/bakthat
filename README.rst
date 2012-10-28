@@ -50,6 +50,9 @@ Overview
     INFO: S3 Bucket: bakthattest
     INFO: bak20120928.tgz.enc
 
+    $ bakthat delete -f bak
+    INFO: Deleting bak20120928.tgz.enc
+
 
 Requirements
 ============
@@ -106,15 +109,15 @@ You can restore the latest version of a backup just by specifying the begining o
 
 ::
 
-    $ mo2s3 restore --f bak
+    $ mo2s3 restore -f bak
 
     if you want to restore an older version
-    $ mo2s3 restore --f bak20120927
+    $ mo2s3 restore -f bak20120927
     or
-    $ mo2s3 restore --f bak20120927.tgz.enc
+    $ mo2s3 restore -f bak20120927.tgz.enc
 
     restore from Glacier
-    $ mo2s3 restore --f bak -d glacier
+    $ mo2s3 restore -f bak -d glacier
 
 When restoring from Glacier, the first time you call the restore command, the job is initiated, then you can check manually whether or not the job is completed (it takes 3-5h to complete), if so the file will be downloaded and restored.
 
@@ -128,6 +131,16 @@ List
     $ bakthat ls -d s3
 
     $ bakthat ls -d glacier
+
+
+Delete
+------
+
+::
+
+    $ bakthat delete -f bak
+
+    $ bakthat delete -f bak -d glacier
 
 
 Backup/Restore Glacier inventory
