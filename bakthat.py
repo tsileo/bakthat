@@ -1,9 +1,9 @@
 import tarfile
+import tempfile
 import os
 import sys
 import ConfigParser
 from datetime import datetime
-from cStringIO import StringIO
 from getpass import getpass
 import logging
 
@@ -66,7 +66,7 @@ class S3Backend:
         k = Key(self.bucket)
         k.key = keyname
 
-        encrypted_out = StringIO()
+        encrypted_out = tempfile.TemporaryFile()
         k.get_contents_to_file(encrypted_out)
         encrypted_out.seek(0)
         
@@ -214,7 +214,7 @@ class GlacierBackend:
 
         if job.completed:
             self.logger.info("Downloading...")
-            encrypted_out = StringIO()
+            encrypted_out = tempfile.TemporaryFile()
             encrypted_out.write(job.get_output().read())
             encrypted_out.seek(0)
             return encrypted_out
@@ -242,7 +242,7 @@ def backup(filename, destination="s3", **kwargs):
     log.info("Backing up " + filename)
     arcname = filename.split("/")[-1]
     
-    out = StringIO()
+    out = tempfile.TemporaryFile()
     with tarfile.open(fileobj=out, mode="w:gz") as tar:
         tar.add(filename, arcname=arcname)
 
@@ -298,7 +298,7 @@ def restore(filename, destination="s3", **kwargs):
         if not password:
             password = getpass()
 
-        out = StringIO()
+        out = tempfile.TemporaryFile()
         decrypt(encrypted_out, out, password)
         out.seek(0)
 
