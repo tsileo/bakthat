@@ -61,6 +61,7 @@ class S3Backend:
         con = boto.connect_s3(access_key, secret_key)
         self.bucket = con.create_bucket(bucket)
         self.container = "S3 Bucket: {}".format(bucket)
+        self.logger = logger
 
     def download(self, keyname):
         k = Key(self.bucket)
@@ -72,11 +73,17 @@ class S3Backend:
         
         return encrypted_out
 
-    def upload(self, keyname, filename):
+    def cb(self, complete, total):
+        percent = int(complete * 100.0 / total)
+        self.logger.info("Upload completion: {}%".format(percent))
+
+    def upload(self, keyname, filename, cb=True):
         k = Key(self.bucket)
         k.key = keyname
-
-        k.set_contents_from_file(filename)
+        upload_kwargs = {}
+        if cb:
+            upload_kwargs = dict(cb=self.cb, num_cb=10)
+        k.set_contents_from_file(filename, **upload_kwargs)
         k.set_acl("private")
 
     def ls(self):
@@ -268,16 +275,19 @@ def backup(filename, destination="s3", **kwargs):
     if not password:
         password = getpass()
 
+    log.info("Compression...")
     out = tempfile.TemporaryFile()
     with tarfile.open(fileobj=out, mode="w:gz") as tar:
         tar.add(filename, arcname=arcname)
 
+    log.info("Encryption...")
     encrypted_out = tempfile.TemporaryFile()
     encrypt(out, encrypted_out, password)
     encrypted_out.seek(0)
 
     stored_filename = arcname + datetime.now().strftime("%Y%m%d") + ".tgz.enc"
 
+    log.info("Uploading...")
     storage_backend.upload(stored_filename, encrypted_out)
 
 
@@ -318,13 +328,16 @@ def restore(filename, destination="s3", **kwargs):
         if not password:
             password = getpass()
 
+    log.info("Downloading...")
     encrypted_out = storage_backend.download(key_name)
 
     if encrypted_out:
+        log.info("Decrypting...")
         out = tempfile.TemporaryFile()
         decrypt(encrypted_out, out, password)
         out.seek(0)
 
+        log.info("Uncompressing...")
         tar = tarfile.open(fileobj=out)
         tar.extractall()
         tar.close()
