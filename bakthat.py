@@ -17,9 +17,12 @@ from beefish import decrypt, encrypt
 import aaargh
 import json
 
+
+DEFAULT_LOCATION = "us-east-1"
+
 app = aaargh.App(description="Compress, encrypt and upload files directly to Amazon S3/Glacier.")
 
-logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
 app_logger = logging
 
 config = ConfigParser.SafeConfigParser()
@@ -49,6 +52,10 @@ class S3Backend:
                 access_key = config.get("aws", "access_key")
                 secret_key = config.get("aws", "secret_key")
                 bucket = config.get("aws", "s3_bucket")
+                try:
+                    region_name = config.get("aws", "region_name")
+                except ConfigParser.NoOptionError:
+                    region_name = DEFAULT_LOCATION
             except ConfigParser.NoOptionError:
                 app_logger.error("Configuration file not available.")
                 app_logger.info("Use 'bakthat configure' to create one.")
@@ -57,9 +64,12 @@ class S3Backend:
             access_key = conf.get("access_key")
             secret_key = conf.get("secret_key")
             bucket = conf.get("bucket")
+            region_name = conf.get("region_name", DEFAULT_LOCATION)
 
         con = boto.connect_s3(access_key, secret_key)
-        self.bucket = con.create_bucket(bucket)
+        if region_name == DEFAULT_LOCATION:
+            region_name = ""
+        self.bucket = con.create_bucket(bucket, location=region_name)
         self.container = "S3 Bucket: {}".format(bucket)
         self.logger = logger
 
@@ -106,6 +116,10 @@ class GlacierBackend:
                 access_key = config.get("aws", "access_key")
                 secret_key = config.get("aws", "secret_key")
                 vault_name = config.get("aws", "glacier_vault")
+                try:
+                    region_name = config.get("aws", "region_name")
+                except ConfigParser.NoOptionError:
+                    region_name = DEFAULT_LOCATION
             except ConfigParser.NoOptionError:
                 app_logger.error("Configuration file not available.")
                 app_logger.info("Use 'bakthat configure' to create one.")
@@ -114,9 +128,10 @@ class GlacierBackend:
             access_key = conf.get("access_key")
             secret_key = conf.get("secret_key")
             vault_name = conf.get("vault")
+            region_name = conf.get("region_name", DEFAULT_LOCATION)
 
         con = boto.connect_glacier(aws_access_key_id=access_key,
-                                    aws_secret_access_key=secret_key)
+                                    aws_secret_access_key=secret_key, region_name=region_name)
 
         self.conf = conf
         self.vault = con.create_vault(vault_name)
@@ -275,7 +290,7 @@ def backup(filename, destination="s3", **kwargs):
     if not password:
         password = getpass()
 
-    log.info("Compression...")
+    log.info("Compressing...")
     out = tempfile.TemporaryFile()
     with tarfile.open(fileobj=out, mode="w:gz") as tar:
         tar.add(filename, arcname=arcname)
@@ -285,7 +300,7 @@ def backup(filename, destination="s3", **kwargs):
     encrypt(out, encrypted_out, password)
     encrypted_out.seek(0)
 
-    stored_filename = arcname + datetime.now().strftime("%Y%m%d") + ".tgz.enc"
+    stored_filename = arcname + datetime.now().strftime("%Y%m%d%H%M%S") + ".tgz.enc"
 
     log.info("Uploading...")
     storage_backend.upload(stored_filename, encrypted_out)
@@ -298,6 +313,10 @@ def configure():
     config.set("aws", "secret_key", raw_input("AWS Secret Key: "))
     config.set("aws", "s3_bucket", raw_input("S3 Bucket Name: "))
     config.set("aws", "glacier_vault", raw_input("Glacier Vault Name: "))
+    region_name = raw_input("Region Name (" + DEFAULT_LOCATION + "): ")
+    if not region_name:
+        region_name = DEFAULT_LOCATION
+    config.set("aws", "region_name", region_name)
     config.write(open(os.path.expanduser("~/.bakthat.conf"), "w"))
 
     app_logger.info("Config written in %s" % os.path.expanduser("~/.bakthat.conf"))
