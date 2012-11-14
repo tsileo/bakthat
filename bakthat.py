@@ -22,8 +22,7 @@ DEFAULT_LOCATION = "us-east-1"
 
 app = aaargh.App(description="Compress, encrypt and upload files directly to Amazon S3/Glacier.")
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
-app_logger = logging
+log = logging.getLogger(__name__)
 
 config = ConfigParser.SafeConfigParser()
 config.read(os.path.expanduser("~/.bakthat.conf"))
@@ -46,7 +45,7 @@ class S3Backend:
     """
     Backend to handle S3 upload/download
     """
-    def __init__(self, conf, logger):
+    def __init__(self, conf):
         if conf is None:
             try:
                 access_key = config.get("aws", "access_key")
@@ -57,8 +56,8 @@ class S3Backend:
                 except ConfigParser.NoOptionError:
                     region_name = DEFAULT_LOCATION
             except ConfigParser.NoOptionError:
-                app_logger.error("Configuration file not available.")
-                app_logger.info("Use 'bakthat configure' to create one.")
+                log.error("Configuration file not available.")
+                log.info("Use 'bakthat configure' to create one.")
                 return
         else:
             access_key = conf.get("access_key")
@@ -71,7 +70,6 @@ class S3Backend:
             region_name = ""
         self.bucket = con.create_bucket(bucket, location=region_name)
         self.container = "S3 Bucket: {}".format(bucket)
-        self.logger = logger
 
     def download(self, keyname):
         k = Key(self.bucket)
@@ -85,7 +83,7 @@ class S3Backend:
 
     def cb(self, complete, total):
         percent = int(complete * 100.0 / total)
-        self.logger.info("Upload completion: {}%".format(percent))
+        log.info("Upload completion: {}%".format(percent))
 
     def upload(self, keyname, filename, cb=True):
         k = Key(self.bucket)
@@ -110,7 +108,7 @@ class GlacierBackend:
     """
     Backend to handle Glacier upload/download
     """
-    def __init__(self, conf, logger):
+    def __init__(self, conf):
         if conf is None:
             try:
                 access_key = config.get("aws", "access_key")
@@ -121,8 +119,8 @@ class GlacierBackend:
                 except ConfigParser.NoOptionError:
                     region_name = DEFAULT_LOCATION
             except ConfigParser.NoOptionError:
-                app_logger.error("Configuration file not available.")
-                app_logger.info("Use 'bakthat configure' to create one.")
+                log.error("Configuration file not available.")
+                log.info("Use 'bakthat configure' to create one.")
                 return
         else:
             access_key = conf.get("access_key")
@@ -135,7 +133,6 @@ class GlacierBackend:
 
         self.conf = conf
         self.vault = con.create_vault(vault_name)
-        self.logger = logger
         self.backup_key = "bakthat_glacier_inventory"
         self.container = "Glacier vault: {}".format(vault_name)
 
@@ -149,7 +146,7 @@ class GlacierBackend:
 
             archives = d["archives"]
 
-        s3_bucket = S3Backend(self.conf, self.logger).bucket
+        s3_bucket = S3Backend(self.conf, log).bucket
         k = Key(s3_bucket)
         k.key = self.backup_key
 
@@ -162,7 +159,7 @@ class GlacierBackend:
         """
         Restore inventory from S3 to local shelve
         """
-        s3_bucket = S3Backend(self.conf, self.logger).bucket
+        s3_bucket = S3Backend(self.conf, log).bucket
         k = Key(s3_bucket)
         k.key = self.backup_key
 
@@ -237,16 +234,16 @@ class GlacierBackend:
             # Commiting changes in shelve
             d["jobs"] = jobs
 
-        self.logger.info("Job {action}: {status_code} ({creation_date}/{completion_date})".format(**job.__dict__))
+        log.info("Job {action}: {status_code} ({creation_date}/{completion_date})".format(**job.__dict__))
 
         if job.completed:
-            self.logger.info("Downloading...")
+            log.info("Downloading...")
             encrypted_out = tempfile.TemporaryFile()
             encrypted_out.write(job.get_output().read())
             encrypted_out.seek(0)
             return encrypted_out
         else:
-            self.logger.info("Not completed yet")
+            log.info("Not completed yet")
             return None
 
     def ls(self):
@@ -279,9 +276,8 @@ storage_backends = dict(s3=S3Backend, glacier=GlacierBackend)
 @app.cmd_arg('-f', '--filename', type=str, default=os.getcwd())
 @app.cmd_arg('-d', '--destination', type=str, default="s3", help="s3|glacier")
 def backup(filename, destination="s3", **kwargs):
-    log = kwargs.get("logger", app_logger)
     conf = kwargs.get("conf", None)
-    storage_backend = storage_backends[destination](conf, log)
+    storage_backend = storage_backends[destination](conf)
 
     log.info("Backing up " + filename)
     arcname = filename.split("/")[-1]
@@ -319,14 +315,13 @@ def configure():
     config.set("aws", "region_name", region_name)
     config.write(open(os.path.expanduser("~/.bakthat.conf"), "w"))
 
-    app_logger.info("Config written in %s" % os.path.expanduser("~/.bakthat.conf"))
+    log.info("Config written in %s" % os.path.expanduser("~/.bakthat.conf"))
 
 
 @app.cmd(help="Restore backup in the current directory.")
 @app.cmd_arg('-f', '--filename', type=str, default="")
 @app.cmd_arg('-d', '--destination', type=str, default="s3", help="s3|glacier")
 def restore(filename, destination="s3", **kwargs):
-    log = kwargs.get("logger", app_logger)
     conf = kwargs.get("conf", None)
     storage_backend = storage_backends[destination](conf, log)
 
@@ -366,9 +361,8 @@ def restore(filename, destination="s3", **kwargs):
 @app.cmd_arg('-f', '--filename', type=str, default="")
 @app.cmd_arg('-d', '--destination', type=str, default="s3", help="s3|glacier")
 def delete(filename, destination="s3", **kwargs):
-    log = kwargs.get("logger", app_logger)
     conf = kwargs.get("conf", None)
-    storage_backend = storage_backends[destination](conf, log)
+    storage_backend = storage_backends[destination](conf)
 
     if not filename:
         log.error("No file to delete, use -f to specify one.")
@@ -388,7 +382,6 @@ def delete(filename, destination="s3", **kwargs):
 @app.cmd(help="List stored backups.")
 @app.cmd_arg('-d', '--destination', type=str, default="s3", help="s3|glacier")
 def ls(destination="s3", **kwargs):
-    log = kwargs.get("logger", app_logger)
     conf = kwargs.get("conf", None)
     storage_backend = storage_backends[destination](conf, log)
     
@@ -400,7 +393,6 @@ def ls(destination="s3", **kwargs):
 
 @app.cmd(help="Backup Glacier inventory to S3")
 def backup_glacier_inventory(**kwargs):
-    log = kwargs.get("logger", app_logger)
     conf = kwargs.get("conf", None)
     glacier_backend = GlacierBackend(conf, log)
     glacier_backend.backup_inventory()
@@ -408,7 +400,6 @@ def backup_glacier_inventory(**kwargs):
 
 @app.cmd(help="Restore Glacier inventory from S3")
 def restore_glacier_inventory(**kwargs):
-    log = kwargs.get("logger", app_logger)
     conf = kwargs.get("conf", None)
     glacier_backend = GlacierBackend(conf, log)
     glacier_backend.restore_inventory()
