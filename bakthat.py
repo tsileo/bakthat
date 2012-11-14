@@ -17,12 +17,14 @@ from beefish import decrypt, encrypt
 import aaargh
 import json
 
-
 DEFAULT_LOCATION = "us-east-1"
 
 app = aaargh.App(description="Compress, encrypt and upload files directly to Amazon S3/Glacier.")
 
 log = logging.getLogger(__name__)
+
+if not log.handlers:
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
 
 config = ConfigParser.SafeConfigParser()
 config.read(os.path.expanduser("~/.bakthat.conf"))
@@ -146,7 +148,7 @@ class GlacierBackend:
 
             archives = d["archives"]
 
-        s3_bucket = S3Backend(self.conf, log).bucket
+        s3_bucket = S3Backend(self.conf).bucket
         k = Key(s3_bucket)
         k.key = self.backup_key
 
@@ -159,7 +161,7 @@ class GlacierBackend:
         """
         Restore inventory from S3 to local shelve
         """
-        s3_bucket = S3Backend(self.conf, log).bucket
+        s3_bucket = S3Backend(self.conf).bucket
         k = Key(s3_bucket)
         k.key = self.backup_key
 
@@ -267,9 +269,6 @@ class GlacierBackend:
 
             self.backup_inventory()
 
-
-
-
 storage_backends = dict(s3=S3Backend, glacier=GlacierBackend)
 
 @app.cmd(help="Backup a file or a directory, backup the current directory if no arg is provided.")
@@ -281,25 +280,27 @@ def backup(filename, destination="s3", **kwargs):
 
     log.info("Backing up " + filename)
     arcname = filename.split("/")[-1]
+    stored_filename = arcname + datetime.now().strftime("%Y%m%d%H%M%S") + ".tgz"
     
     password = kwargs.get("password")
     if not password:
-        password = getpass()
+        password = getpass("Password (blank to disable encryption): ")
 
     log.info("Compressing...")
     out = tempfile.TemporaryFile()
     with tarfile.open(fileobj=out, mode="w:gz") as tar:
         tar.add(filename, arcname=arcname)
 
-    log.info("Encryption...")
-    encrypted_out = tempfile.TemporaryFile()
-    encrypt(out, encrypted_out, password)
-    encrypted_out.seek(0)
-
-    stored_filename = arcname + datetime.now().strftime("%Y%m%d%H%M%S") + ".tgz.enc"
+    if password:
+        log.info("Encrypting...")
+        encrypted_out = tempfile.TemporaryFile()
+        encrypt(out, encrypted_out, password)
+        stored_filename += ".enc"
+        out = encrypted_out
 
     log.info("Uploading...")
-    storage_backend.upload(stored_filename, encrypted_out)
+    out.seek(0)
+    storage_backend.upload(stored_filename, out)
 
 
 @app.cmd(help="Set AWS S3/Glacier credentials.")
@@ -323,7 +324,7 @@ def configure():
 @app.cmd_arg('-d', '--destination', type=str, default="s3", help="s3|glacier")
 def restore(filename, destination="s3", **kwargs):
     conf = kwargs.get("conf", None)
-    storage_backend = storage_backends[destination](conf, log)
+    storage_backend = storage_backends[destination](conf)
 
     if not filename:
         log.error("No file to restore, use -f to specify one.")
@@ -337,21 +338,24 @@ def restore(filename, destination="s3", **kwargs):
     key_name = sorted(keys, reverse=True)[0]
     log.info("Restoring " + key_name)
 
-    if key_name:
+    # Asking password before actually download to avoid waiting
+    if key_name and key_name.endswith(".enc"):
         password = kwargs.get("password")
         if not password:
             password = getpass()
 
     log.info("Downloading...")
-    encrypted_out = storage_backend.download(key_name)
+    out = storage_backend.download(key_name)
 
-    if encrypted_out:
+    if out and key_name.endswith(".enc"):
         log.info("Decrypting...")
-        out = tempfile.TemporaryFile()
-        decrypt(encrypted_out, out, password)
-        out.seek(0)
+        decrypted_out = tempfile.TemporaryFile()
+        decrypt(out, decrypted_out, password)
+        out = decrypted_out
 
+    if out:
         log.info("Uncompressing...")
+        out.seek(0)
         tar = tarfile.open(fileobj=out)
         tar.extractall()
         tar.close()
@@ -383,7 +387,7 @@ def delete(filename, destination="s3", **kwargs):
 @app.cmd_arg('-d', '--destination', type=str, default="s3", help="s3|glacier")
 def ls(destination="s3", **kwargs):
     conf = kwargs.get("conf", None)
-    storage_backend = storage_backends[destination](conf, log)
+    storage_backend = storage_backends[destination](conf)
     
     log.info(storage_backend.container)
 
@@ -394,14 +398,14 @@ def ls(destination="s3", **kwargs):
 @app.cmd(help="Backup Glacier inventory to S3")
 def backup_glacier_inventory(**kwargs):
     conf = kwargs.get("conf", None)
-    glacier_backend = GlacierBackend(conf, log)
+    glacier_backend = GlacierBackend(conf)
     glacier_backend.backup_inventory()
 
 
 @app.cmd(help="Restore Glacier inventory from S3")
 def restore_glacier_inventory(**kwargs):
     conf = kwargs.get("conf", None)
-    glacier_backend = GlacierBackend(conf, log)
+    glacier_backend = GlacierBackend(conf)
     glacier_backend.restore_inventory()
 
 

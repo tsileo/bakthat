@@ -10,7 +10,7 @@ Since I didn't found any solution that allows me to quickly perform encrypted ba
 Here are some features:
 
 * Compress with `tarfile <http://docs.python.org/library/tarfile.html>`_
-* Encrypt with `beefish <http://pypi.python.org/pypi/beefish>`_
+* Encrypt with `beefish <http://pypi.python.org/pypi/beefish>`_ (**optional**)
 * Upload/download to S3 or Glacier with `boto <http://pypi.python.org/pypi/boto>`_
 * Local Glacier inventory stored with `shelve <http://docs.python.org/library/shelve.html>`_
 * Automatically handle/backup/restore a custom Glacier inventory to S3
@@ -25,33 +25,46 @@ Overview
     $ cd /dir/i/want/to/bak
     $ bakthat backup
     INFO: Backing up /dir/i/want/to/bak
-    Password:
+    Password (blank to disable encryption): 
+    2012-11-14 19:55:07,585 INFO: Compressing...
+    2012-11-14 19:55:07,590 INFO: Encrypting...
+    2012-11-14 19:55:07,597 INFO: Uploading...
+    2012-11-14 19:55:07,615 INFO: Upload completion: 0%
+    2012-11-14 19:55:07,616 INFO: Upload completion: 100%
     $
 
     $ bakthat backup -d glacier
-    INFO: Backing up /dir/i/want/to/bak
-    Password:
+    2012-11-14 19:55:44,043 INFO: Backing up /dir/i/want/to/bak
+    Password (blank to disable encryption): 
+    2012-11-14 19:55:48,385 INFO: Compressing...
+    2012-11-14 19:55:48,390 INFO: Encrypting...
+    2012-11-14 19:55:48,397 INFO: Uploading...
+
     $
 
 
     $ bakthat restore -f bak
     INFO: Restoring bak20120928.tgz.enc
-    Password: 
+    Password:
+    2012-11-14 19:55:19,365 INFO: Downloading...
+    2012-11-14 19:55:19,507 INFO: Decrypting...
+    2012-11-14 19:55:19,508 INFO: Uncompressing... 
     $
 
 
-    $ bakthat restore -f bak -d glacier
-    INFO: Restoring glaciervault.py20121018.tgz.enc
-    INFO: Job ArchiveRetrieval: InProgress (2012-10-17T22:02:06.768Z/None)
-    INFO: Not completed yet
+    $ bakthat restore -f todo -d glacier
+    2012-11-14 20:01:39,491 INFO: Restoring todo20121114195616.tgz
+    2012-11-14 20:01:39,491 INFO: Downloading...
+    2012-11-14 20:01:39,809 INFO: Job ArchiveRetrieval: InProgress (2012-11-14T19:01:32.288Z/None)
+    2012-11-14 20:01:39,809 INFO: Not completed yet
     $
 
     $ bakthat ls
-    INFO: S3 Bucket: bakthattest
-    INFO: bak20120928.tgz.enc
+    2012-11-14 19:59:58,500 INFO: S3 Bucket: bakthattest
+    2012-11-14 19:59:58,919 INFO: todo20121114195502.tgz.enc
 
     $ bakthat delete -f bak
-    INFO: Deleting bak20120928.tgz.enc
+    2012-11-14 19:55:30,148 INFO: Deleting todo20121114195502.tgz.enc
 
 
 Requirements
@@ -176,11 +189,10 @@ As a module
     # and want to use this file:
     bakthat.backup("/dir/i/wanto/bak")
 
-    # you can optionally pass a custom logger
-    bakthat.backup("/dir/i/wanto/bak", logger=my_logger_instance, conf=aws_conf)
+    bakthat.ls()
 
     # restore in the current working directory
-    bakthat.restore("bak", logger=my_logger_instance, conf=aws_conf)
+    bakthat.restore("bak", conf=aws_conf)
 
 
 Contributors
