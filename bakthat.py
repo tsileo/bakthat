@@ -6,16 +6,16 @@ import ConfigParser
 from datetime import datetime
 from getpass import getpass
 import logging
+import shelve
+import json
 
 import boto
 from boto.s3.key import Key
-import shelve
 import boto.glacier
 import boto.glacier.layer2
 from boto.glacier.exceptions import UnexpectedHTTPResponseError
 from beefish import decrypt, encrypt
 import aaargh
-import json
 
 DEFAULT_LOCATION = "us-east-1"
 
@@ -285,6 +285,11 @@ def backup(filename, destination="s3", **kwargs):
     password = kwargs.get("password")
     if not password:
         password = getpass("Password (blank to disable encryption): ")
+        if password:
+            password2 = getpass("Password confirmation: ")
+            if password != password2:
+                log.error("Password confirmation doesn't match")
+                return
 
     log.info("Compressing...")
     out = tempfile.TemporaryFile()
