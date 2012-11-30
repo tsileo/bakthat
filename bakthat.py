@@ -14,7 +14,7 @@ from boto.s3.key import Key
 import boto.glacier
 import boto.glacier.layer2
 from boto.glacier.exceptions import UnexpectedHTTPResponseError
-from beefish import decrypt, encrypt
+from beefish import decrypt, encrypt_file
 import aaargh
 
 DEFAULT_LOCATION = "us-east-1"
@@ -93,7 +93,7 @@ class S3Backend:
         upload_kwargs = {}
         if cb:
             upload_kwargs = dict(cb=self.cb, num_cb=10)
-        k.set_contents_from_file(filename, **upload_kwargs)
+        k.set_contents_from_filename(filename, **upload_kwargs)
         k.set_acl("private")
 
     def ls(self):
@@ -176,7 +176,7 @@ class GlacierBackend:
 
 
     def upload(self, keyname, filename):
-        archive_id = self.vault.create_archive_from_file(file_obj=filename)
+        archive_id = self.vault.concurrent_create_archive_from_file(filename)
 
         # Storing the filename => archive_id data.
         with glacier_shelve() as d:
@@ -292,20 +292,22 @@ def backup(filename, destination="s3", **kwargs):
                 return
 
     log.info("Compressing...")
-    out = tempfile.TemporaryFile()
-    with tarfile.open(fileobj=out, mode="w:gz") as tar:
-        tar.add(filename, arcname=arcname)
+    with tempfile.NamedTemporaryFile(delete=False) as out:
+        with tarfile.open(fileobj=out, mode="w:gz") as tar:
+            tar.add(filename, arcname=arcname)
+        outname = out.name
 
     if password:
         log.info("Encrypting...")
-        encrypted_out = tempfile.TemporaryFile()
-        encrypt(out, encrypted_out, password)
+        encrypted_out = tempfile.NamedTemporaryFile(delete=False)
+        encrypt_file(outname, encrypted_out.name, password)
         stored_filename += ".enc"
-        out = encrypted_out
+        os.remove(outname)  # remove non-encrypted tmp file
+        outname = encrypted_out.name
 
     log.info("Uploading...")
-    out.seek(0)
-    storage_backend.upload(stored_filename, out)
+    storage_backend.upload(stored_filename, outname)
+    os.remove(outname)
 
 
 @app.cmd(help="Set AWS S3/Glacier credentials.")
