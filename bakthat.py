@@ -279,7 +279,7 @@ def backup(filename, destination="s3", **kwargs):
     storage_backend = storage_backends[destination](conf)
 
     log.info("Backing up " + filename)
-    arcname = filename.split("/")[-1]
+    arcname = filename.strip('/').split('/')[-1]
     stored_filename = arcname + datetime.now().strftime("%Y%m%d%H%M%S") + ".tgz"
     
     password = kwargs.get("password")
