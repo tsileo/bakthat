@@ -122,15 +122,15 @@ You can restore the latest version of a backup just by specifying the begining o
 
 ::
 
-    $ mo2s3 restore -f bak
+    $ bakthat restore -f bak
 
     if you want to restore an older version
-    $ mo2s3 restore -f bak20120927
+    $ bakthat restore -f bak20120927
     or
-    $ mo2s3 restore -f bak20120927.tgz.enc
+    $ bakthat restore -f bak20120927.tgz.enc
 
     restore from Glacier
-    $ mo2s3 restore -f bak -d glacier
+    $ bakthat restore -f bak -d glacier
 
 When restoring from Glacier, the first time you call the restore command, the job is initiated, then you can check manually whether or not the job is completed (it takes 3-5h to complete), if so the file will be downloaded and restored.
 
@@ -159,7 +159,7 @@ Delete
 Backup/Restore Glacier inventory
 --------------------------------
 
-Bakthat automatically backup the local Glacier inventory (a dict with filename => archive_id mapping) to your S3 bucket under the "bakthat_glacier_inventory" key.
+Bakthat automatically backups the local Glacier inventory (a dict with filename => archive_id mapping) to your S3 bucket under the "bakthat_glacier_inventory" key.
 
 You can trigger a backup mannualy:
 
