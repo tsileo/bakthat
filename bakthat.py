@@ -175,8 +175,10 @@ class GlacierBackend:
             d["archives"] = archives
 
 
-    def upload(self, keyname, filename):
-        archive_id = self.vault.concurrent_create_archive_from_file(filename)
+    def upload(self, keyname, filename, description=None):
+        if description is None:
+            description = keyname
+        archive_id = self.vault.concurrent_create_archive_from_file(filename, description)
 
         # Storing the filename => archive_id data.
         with glacier_shelve() as d:
@@ -248,6 +250,15 @@ class GlacierBackend:
             log.info("Not completed yet")
             return None
 
+    def retrieve_inventory(self, jobid):
+        """
+        Initiate a job to retrieve Galcier inventory or output inventory
+        """
+        if jobid is None:
+            return self.vault.retrieve_inventory(sns_topic=None, description="Bakthat inventory job")
+        else:
+            return self.vault.get_job(jobid)
+
     def ls(self):
         with glacier_shelve() as d:
             if not d.has_key("archives"):
@@ -273,14 +284,15 @@ storage_backends = dict(s3=S3Backend, glacier=GlacierBackend)
 
 @app.cmd(help="Backup a file or a directory, backup the current directory if no arg is provided.")
 @app.cmd_arg('-f', '--filename', type=str, default=os.getcwd())
-@app.cmd_arg('-d', '--destination', type=str, default="s3", help="s3|glacier")
-def backup(filename, destination="s3", **kwargs):
+@app.cmd_arg('-d', '--destination', type=str, default="glacier", help="s3|glacier")
+@app.cmd_arg('-s', '--description', type=str, default=None)
+def backup(filename, destination="glacier", description=None, **kwargs):
     conf = kwargs.get("conf", None)
     storage_backend = storage_backends[destination](conf)
 
     log.info("Backing up " + filename)
     arcname = filename.strip('/').split('/')[-1]
-    stored_filename = arcname + datetime.now().strftime("%Y%m%d%H%M%S") + ".tgz"
+    stored_filename = arcname +  '.tgz'
     
     password = kwargs.get("password")
     if not password:
@@ -306,7 +318,7 @@ def backup(filename, destination="s3", **kwargs):
         outname = encrypted_out.name
 
     log.info("Uploading...")
-    storage_backend.upload(stored_filename, outname)
+    storage_backend.upload(stored_filename, outname, description)
     os.remove(outname)
 
 
@@ -414,6 +426,16 @@ def restore_glacier_inventory(**kwargs):
     conf = kwargs.get("conf", None)
     glacier_backend = GlacierBackend(conf)
     glacier_backend.restore_inventory()
+
+
+@app.cmd(help="Retrieve Glacier inventory")
+@app.cmd_arg('-j', '--jobid', type=str, default=None, help="inventory job id")
+def retrieve_glacier_inventory(jobid=None, **kwargs):
+    conf = kwargs.get("conf", None)
+    glacier_backend = GlacierBackend(conf)
+    job = glacier_backend.retrieve_inventory(jobid)
+    if jobid is not None:
+        print json.dumps(job.get_output())
 
 
 def main():
