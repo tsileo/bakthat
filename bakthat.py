@@ -14,6 +14,7 @@ from boto.s3.key import Key
 import boto.glacier
 import boto.glacier.layer2
 from boto.glacier.exceptions import UnexpectedHTTPResponseError
+from boto.glacier.concurrent import ConcurrentDownloader
 from beefish import decrypt, encrypt_file
 import aaargh
 
@@ -259,6 +260,16 @@ class GlacierBackend:
         else:
             return self.vault.get_job(jobid)
 
+    def retrieve_archive(self, archive_id, jobid):
+        """
+        Initiate a job to retrieve Galcier archive or download archive
+        """
+        if jobid is None:
+            return self.vault.retrieve_archive(archive_id, sns_topic=None, description='Retrieval job')
+        else:
+            return self.vault.get_job(jobid)
+
+
     def ls(self):
         with glacier_shelve() as d:
             if not d.has_key("archives"):
@@ -430,12 +441,24 @@ def restore_glacier_inventory(**kwargs):
 
 @app.cmd(help="Retrieve Glacier inventory")
 @app.cmd_arg('-j', '--jobid', type=str, default=None, help="inventory job id")
-def retrieve_glacier_inventory(jobid=None, **kwargs):
+def retrieve_inventory(jobid=None, **kwargs):
     conf = kwargs.get("conf", None)
     glacier_backend = GlacierBackend(conf)
     job = glacier_backend.retrieve_inventory(jobid)
     if jobid is not None:
         print json.dumps(job.get_output())
+
+
+@app.cmd(help="Retrieve Glacier archive")
+@app.cmd_arg('archiveid', help="archive id")
+@app.cmd_arg('-j', '--jobid', type=str, default=None, help="archive retrieval job id")
+def retrieve_archive(archiveid, jobid=None, **kwargs):
+    conf = kwargs.get("conf", None)
+    glacier_backend = GlacierBackend(conf)
+    job = glacier_backend.retrieve_archive(archiveid, jobid)
+    if jobid is not None:
+        cd = ConcurrentDownloader(job, part_size=4194304, num_threads=8)
+        cd.download(archiveid[:8]+'.out')
 
 
 def main():
