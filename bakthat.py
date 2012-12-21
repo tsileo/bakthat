@@ -14,7 +14,8 @@ from boto.s3.key import Key
 import boto.glacier
 import boto.glacier.layer2
 from boto.glacier.exceptions import UnexpectedHTTPResponseError
-from beefish import decrypt, encrypt
+from boto.glacier.concurrent import ConcurrentDownloader
+from beefish import decrypt, encrypt_file
 import aaargh
 
 DEFAULT_LOCATION = "us-east-1"
@@ -93,7 +94,7 @@ class S3Backend:
         upload_kwargs = {}
         if cb:
             upload_kwargs = dict(cb=self.cb, num_cb=10)
-        k.set_contents_from_file(filename, **upload_kwargs)
+        k.set_contents_from_filename(filename, **upload_kwargs)
         k.set_acl("private")
 
     def ls(self):
@@ -175,8 +176,10 @@ class GlacierBackend:
             d["archives"] = archives
 
 
-    def upload(self, keyname, filename):
-        archive_id = self.vault.create_archive_from_file(file_obj=filename)
+    def upload(self, keyname, filename, description=None):
+        if description is None:
+            description = keyname
+        archive_id = self.vault.concurrent_create_archive_from_file(filename, description)
 
         # Storing the filename => archive_id data.
         with glacier_shelve() as d:
@@ -248,6 +251,25 @@ class GlacierBackend:
             log.info("Not completed yet")
             return None
 
+    def retrieve_inventory(self, jobid):
+        """
+        Initiate a job to retrieve Galcier inventory or output inventory
+        """
+        if jobid is None:
+            return self.vault.retrieve_inventory(sns_topic=None, description="Bakthat inventory job")
+        else:
+            return self.vault.get_job(jobid)
+
+    def retrieve_archive(self, archive_id, jobid):
+        """
+        Initiate a job to retrieve Galcier archive or download archive
+        """
+        if jobid is None:
+            return self.vault.retrieve_archive(archive_id, sns_topic=None, description='Retrieval job')
+        else:
+            return self.vault.get_job(jobid)
+
+
     def ls(self):
         with glacier_shelve() as d:
             if not d.has_key("archives"):
@@ -273,14 +295,15 @@ storage_backends = dict(s3=S3Backend, glacier=GlacierBackend)
 
 @app.cmd(help="Backup a file or a directory, backup the current directory if no arg is provided.")
 @app.cmd_arg('-f', '--filename', type=str, default=os.getcwd())
-@app.cmd_arg('-d', '--destination', type=str, default="s3", help="s3|glacier")
-def backup(filename, destination="s3", **kwargs):
+@app.cmd_arg('-d', '--destination', type=str, default="glacier", help="s3|glacier")
+@app.cmd_arg('-s', '--description', type=str, default=None)
+def backup(filename, destination="glacier", description=None, **kwargs):
     conf = kwargs.get("conf", None)
     storage_backend = storage_backends[destination](conf)
 
     log.info("Backing up " + filename)
-    arcname = filename.split("/")[-1]
-    stored_filename = arcname + datetime.now().strftime("%Y%m%d%H%M%S") + ".tgz"
+    arcname = filename.strip('/').split('/')[-1]
+    stored_filename = arcname +  '.tgz'
     
     password = kwargs.get("password")
     if not password:
@@ -292,20 +315,22 @@ def backup(filename, destination="s3", **kwargs):
                 return
 
     log.info("Compressing...")
-    out = tempfile.TemporaryFile()
-    with tarfile.open(fileobj=out, mode="w:gz") as tar:
-        tar.add(filename, arcname=arcname)
+    with tempfile.NamedTemporaryFile(delete=False) as out:
+        with tarfile.open(fileobj=out, mode="w:gz") as tar:
+            tar.add(filename, arcname=arcname)
+        outname = out.name
 
     if password:
         log.info("Encrypting...")
-        encrypted_out = tempfile.TemporaryFile()
-        encrypt(out, encrypted_out, password)
+        encrypted_out = tempfile.NamedTemporaryFile(delete=False)
+        encrypt_file(outname, encrypted_out.name, password)
         stored_filename += ".enc"
-        out = encrypted_out
+        os.remove(outname)  # remove non-encrypted tmp file
+        outname = encrypted_out.name
 
     log.info("Uploading...")
-    out.seek(0)
-    storage_backend.upload(stored_filename, out)
+    storage_backend.upload(stored_filename, outname, description)
+    os.remove(outname)
 
 
 @app.cmd(help="Set AWS S3/Glacier credentials.")
@@ -412,6 +437,28 @@ def restore_glacier_inventory(**kwargs):
     conf = kwargs.get("conf", None)
     glacier_backend = GlacierBackend(conf)
     glacier_backend.restore_inventory()
+
+
+@app.cmd(help="Retrieve Glacier inventory")
+@app.cmd_arg('-j', '--jobid', type=str, default=None, help="inventory job id")
+def retrieve_inventory(jobid=None, **kwargs):
+    conf = kwargs.get("conf", None)
+    glacier_backend = GlacierBackend(conf)
+    job = glacier_backend.retrieve_inventory(jobid)
+    if jobid is not None:
+        print json.dumps(job.get_output())
+
+
+@app.cmd(help="Retrieve Glacier archive")
+@app.cmd_arg('archiveid', help="archive id")
+@app.cmd_arg('-j', '--jobid', type=str, default=None, help="archive retrieval job id")
+def retrieve_archive(archiveid, jobid=None, **kwargs):
+    conf = kwargs.get("conf", None)
+    glacier_backend = GlacierBackend(conf)
+    job = glacier_backend.retrieve_archive(archiveid, jobid)
+    if jobid is not None:
+        cd = ConcurrentDownloader(job, part_size=4194304, num_threads=8)
+        cd.download(archiveid[:8]+'.out')
 
 
 def main():
