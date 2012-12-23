@@ -199,6 +199,7 @@ Contributors
 ============
 
 - Eric Chamberlain
+- Darius Braziunas
 
 
 License (MIT)

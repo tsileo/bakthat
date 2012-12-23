@@ -439,28 +439,6 @@ def restore_glacier_inventory(**kwargs):
     glacier_backend.restore_inventory()
 
 
-@app.cmd(help="Retrieve Glacier inventory")
-@app.cmd_arg('-j', '--jobid', type=str, default=None, help="inventory job id")
-def retrieve_inventory(jobid=None, **kwargs):
-    conf = kwargs.get("conf", None)
-    glacier_backend = GlacierBackend(conf)
-    job = glacier_backend.retrieve_inventory(jobid)
-    if jobid is not None:
-        print json.dumps(job.get_output())
-
-
-@app.cmd(help="Retrieve Glacier archive")
-@app.cmd_arg('archiveid', help="archive id")
-@app.cmd_arg('-j', '--jobid', type=str, default=None, help="archive retrieval job id")
-def retrieve_archive(archiveid, jobid=None, **kwargs):
-    conf = kwargs.get("conf", None)
-    glacier_backend = GlacierBackend(conf)
-    job = glacier_backend.retrieve_archive(archiveid, jobid)
-    if jobid is not None:
-        cd = ConcurrentDownloader(job, part_size=4194304, num_threads=8)
-        cd.download(archiveid[:8]+'.out')
-
-
 def main():
     app.run()
 
