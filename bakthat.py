@@ -184,10 +184,8 @@ class GlacierBackend:
             d["archives"] = archives
 
 
-    def upload(self, keyname, filename, description=None):
-        if description is None:
-            description = keyname
-        archive_id = self.vault.concurrent_create_archive_from_file(filename, description)
+    def upload(self, keyname, filename):
+        archive_id = self.vault.concurrent_create_archive_from_file(filename, keyname)
 
         # Storing the filename => archive_id data.
         with glacier_shelve() as d:
@@ -311,7 +309,7 @@ def backup(filename, destination="glacier", description=None, **kwargs):
 
     log.info("Backing up " + filename)
     arcname = filename.strip('/').split('/')[-1]
-    stored_filename = arcname +  '.tgz'
+    stored_filename = arcname +  datetime.now().strftime("%Y%m%d%H%M%S") + ".tgz"
     
     password = kwargs.get("password")
     if not password:
