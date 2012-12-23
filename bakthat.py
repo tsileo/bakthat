@@ -14,7 +14,6 @@ from boto.s3.key import Key
 import boto.glacier
 import boto.glacier.layer2
 from boto.glacier.exceptions import UnexpectedHTTPResponseError
-from boto.glacier.concurrent import ConcurrentDownloader
 from boto.exception import S3ResponseError
 from beefish import decrypt, encrypt_file
 import aaargh
