@@ -15,6 +15,7 @@ import boto.glacier
 import boto.glacier.layer2
 from boto.glacier.exceptions import UnexpectedHTTPResponseError
 from boto.glacier.concurrent import ConcurrentDownloader
+from boto.exception import S3ResponseError
 from beefish import decrypt, encrypt_file
 import aaargh
 
@@ -71,7 +72,15 @@ class S3Backend:
         con = boto.connect_s3(access_key, secret_key)
         if region_name == DEFAULT_LOCATION:
             region_name = ""
-        self.bucket = con.create_bucket(bucket, location=region_name)
+
+        try:
+            self.bucket = con.get_bucket(bucket)
+        except S3ResponseError, e:
+            if e.code == "NoSuchBucket":
+                self.bucket = con.create_bucket(bucket, location=region_name)
+            else:
+                raise e
+
         self.container = "S3 Bucket: {}".format(bucket)
 
     def download(self, keyname):
