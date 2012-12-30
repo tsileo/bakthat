@@ -335,7 +335,7 @@ def backup(filename, destination="glacier", description=None, **kwargs):
         outname = encrypted_out.name
 
     log.info("Uploading...")
-    storage_backend.upload(stored_filename, outname, description)
+    storage_backend.upload(stored_filename, outname)
     os.remove(outname)
 
 
