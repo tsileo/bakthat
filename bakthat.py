@@ -185,7 +185,7 @@ class GlacierBackend:
 
 
     def upload(self, keyname, filename):
-        archive_id = self.vault.concurrent_create_archive_from_file(filename, keyname)
+        archive_id = self.vault.concurrent_create_archive_from_file(filename) # , keyname => second argument not on pypi yet
 
         # Storing the filename => archive_id data.
         with glacier_shelve() as d:
@@ -301,7 +301,7 @@ storage_backends = dict(s3=S3Backend, glacier=GlacierBackend)
 
 @app.cmd(help="Backup a file or a directory, backup the current directory if no arg is provided.")
 @app.cmd_arg('-f', '--filename', type=str, default=os.getcwd())
-@app.cmd_arg('-d', '--destination', type=str, default="glacier", help="s3|glacier")
+@app.cmd_arg('-d', '--destination', type=str, default="s3", help="s3|glacier")
 @app.cmd_arg('-s', '--description', type=str, default=None)
 def backup(filename, destination="glacier", description=None, **kwargs):
     conf = kwargs.get("conf", None)
