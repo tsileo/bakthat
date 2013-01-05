@@ -194,6 +194,26 @@ As a module
     # restore in the current working directory
     bakthat.restore("bak", conf=aws_conf)
 
+S3 and Glacier IAM permissions
+==============================================
+
+::
+	{       
+	    "Statement": [
+		{
+		    "Effect": "Allow",
+		    "Action": "s3:*",
+		    "Resource": "arn:aws:s3:::S3_BUCKET_NAME*"
+		},
+		{
+		    "Effect": "Allow",
+		    "Action": "glacier:*"
+		    "Resource": "arn:aws:glacier:AWS_REGION:AWS_ACCOUNT_ID:vaults/GLACIER_VAULT_NAME",
+		}
+	    ]
+	}
+
+
 
 Contributors
 ============
