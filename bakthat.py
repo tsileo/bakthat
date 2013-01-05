@@ -1,3 +1,5 @@
+#!/usr/bin/env python2
+
 import tarfile
 import tempfile
 import os
