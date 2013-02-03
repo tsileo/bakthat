@@ -194,6 +194,7 @@ As a module
     # restore in the current working directory
     bakthat.restore("bak", conf=aws_conf)
 
+
 S3 and Glacier IAM permissions
 ==============================================
 
@@ -221,6 +222,7 @@ Contributors
 
 - Eric Chamberlain
 - Darius Braziunas
+- Sławomir Żak
 
 
 License (MIT)
