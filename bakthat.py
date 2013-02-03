@@ -1,3 +1,5 @@
+#!/usr/bin/env python2
+
 import tarfile
 import tempfile
 import os
@@ -19,6 +21,7 @@ from beefish import decrypt, encrypt_file
 import aaargh
 
 DEFAULT_LOCATION = "us-east-1"
+DEFAULT_DESTINATION = "glacier"
 
 app = aaargh.App(description="Compress, encrypt and upload files directly to Amazon S3/Glacier.")
 
@@ -301,10 +304,12 @@ storage_backends = dict(s3=S3Backend, glacier=GlacierBackend)
 
 @app.cmd(help="Backup a file or a directory, backup the current directory if no arg is provided.")
 @app.cmd_arg('-f', '--filename', type=str, default=os.getcwd())
-@app.cmd_arg('-d', '--destination', type=str, default="s3", help="s3|glacier")
+@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier")
 @app.cmd_arg('-s', '--description', type=str, default=None)
-def backup(filename, destination="glacier", description=None, **kwargs):
+def backup(filename, destination=None, description=None, **kwargs):
     conf = kwargs.get("conf", None)
+    if not destination:
+        destination = config.get("aws", "default_destination")
     storage_backend = storage_backends[destination](conf)
 
     log.info("Backing up " + filename)
@@ -345,6 +350,17 @@ def configure():
     config.set("aws", "access_key", raw_input("AWS Access Key: "))
     config.set("aws", "secret_key", raw_input("AWS Secret Key: "))
     config.set("aws", "s3_bucket", raw_input("S3 Bucket Name: "))
+    while 1:
+        default_destination = raw_input("Default destination (glacier): ")
+        if default_destination:
+            default_destination = default_destination.lower()
+            if default_destination in ("s3", "glacier"):
+                break
+            else:
+                log.error("Invalid default_destination, should be s3 or glacier, try again.")
+        else:
+            default_destination = DEFAULT_DESTINATION
+    config.set("aws", "default_destination", default_destination)
     config.set("aws", "glacier_vault", raw_input("Glacier Vault Name: "))
     region_name = raw_input("Region Name (" + DEFAULT_LOCATION + "): ")
     if not region_name:
@@ -357,9 +373,11 @@ def configure():
 
 @app.cmd(help="Restore backup in the current directory.")
 @app.cmd_arg('-f', '--filename', type=str, default="")
-@app.cmd_arg('-d', '--destination', type=str, default="s3", help="s3|glacier")
-def restore(filename, destination="s3", **kwargs):
+@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier")
+def restore(filename, destination=None, **kwargs):
     conf = kwargs.get("conf", None)
+    if not destination:
+        destination = config.get("aws", "default_destination")
     storage_backend = storage_backends[destination](conf)
 
     if not filename:
@@ -399,9 +417,11 @@ def restore(filename, destination="s3", **kwargs):
 
 @app.cmd(help="Delete a backup.")
 @app.cmd_arg('-f', '--filename', type=str, default="")
-@app.cmd_arg('-d', '--destination', type=str, default="s3", help="s3|glacier")
-def delete(filename, destination="s3", **kwargs):
+@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier")
+def delete(filename, destination=None, **kwargs):
     conf = kwargs.get("conf", None)
+    if not destination:
+        destination = config.get("aws", "default_destination")
     storage_backend = storage_backends[destination](conf)
 
     if not filename:
@@ -420,9 +440,11 @@ def delete(filename, destination="s3", **kwargs):
 
 
 @app.cmd(help="List stored backups.")
-@app.cmd_arg('-d', '--destination', type=str, default="s3", help="s3|glacier")
-def ls(destination="s3", **kwargs):
+@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier")
+def ls(destination=None, **kwargs):
     conf = kwargs.get("conf", None)
+    if not destination:
+        destination = config.get("aws", "default_destination")
     storage_backend = storage_backends[destination](conf)
     
     log.info(storage_backend.container)
