@@ -21,7 +21,7 @@ from beefish import decrypt, encrypt_file
 import aaargh
 
 DEFAULT_LOCATION = "us-east-1"
-DEFAULT_DESTINATION = "glacier"
+DEFAULT_DESTINATION = "s3"
 
 app = aaargh.App(description="Compress, encrypt and upload files directly to Amazon S3/Glacier.")
 
