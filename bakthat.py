@@ -20,6 +20,8 @@ from boto.exception import S3ResponseError
 from beefish import decrypt, encrypt_file
 import aaargh
 
+__version__ = "0.3.0"
+
 DEFAULT_LOCATION = "us-east-1"
 DEFAULT_DESTINATION = "s3"
 
@@ -30,7 +32,7 @@ log = logging.getLogger(__name__)
 if not log.handlers:
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
 
-config = ConfigParser.SafeConfigParser()
+config = ConfigParser.SafeConfigParser({"default_destination": DEFAULT_DESTINATION})
 config.read(os.path.expanduser("~/.bakthat.conf"))
 
 class glacier_shelve(object):
@@ -317,7 +319,7 @@ def backup(filename, destination=None, description=None, **kwargs):
     stored_filename = arcname +  datetime.now().strftime("%Y%m%d%H%M%S") + ".tgz"
     
     password = kwargs.get("password")
-    if not password:
+    if password is None:
         password = getpass("Password (blank to disable encryption): ")
         if password:
             password2 = getpass("Password confirmation: ")
@@ -351,7 +353,7 @@ def configure():
     config.set("aws", "secret_key", raw_input("AWS Secret Key: "))
     config.set("aws", "s3_bucket", raw_input("S3 Bucket Name: "))
     while 1:
-        default_destination = raw_input("Default destination (glacier): ")
+        default_destination = raw_input("Default destination ({}): ".format(DEFAULT_DESTINATION))
         if default_destination:
             default_destination = default_destination.lower()
             if default_destination in ("s3", "glacier"):
@@ -362,7 +364,7 @@ def configure():
             default_destination = DEFAULT_DESTINATION
     config.set("aws", "default_destination", default_destination)
     config.set("aws", "glacier_vault", raw_input("Glacier Vault Name: "))
-    region_name = raw_input("Region Name (" + DEFAULT_LOCATION + "): ")
+    region_name = raw_input("Region Name ({}): ".format(DEFAULT_LOCATION))
     if not region_name:
         region_name = DEFAULT_LOCATION
     config.set("aws", "region_name", region_name)
