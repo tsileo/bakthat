@@ -1,5 +1,5 @@
 #!/usr/bin/env python2
-
+# -*- encoding: utf-8 -*-
 import tarfile
 import tempfile
 import os
@@ -10,6 +10,7 @@ from getpass import getpass
 import logging
 import shelve
 import json
+import re
 
 import boto
 from boto.s3.key import Key
@@ -218,7 +219,7 @@ class GlacierBackend:
 
         return None
 
-    def download(self, keyname):
+    def download(self, keyname, job_check=False):
         """
         Initiate a Job, check its status, and download the archive if it's completed.
         """
@@ -260,7 +261,9 @@ class GlacierBackend:
             return encrypted_out
         else:
             log.info("Not completed yet")
-            return None
+            if job_check:
+                return job
+            return
 
     def retrieve_inventory(self, jobid):
         """
@@ -302,7 +305,31 @@ class GlacierBackend:
 
             self.backup_inventory()
 
-storage_backends = dict(s3=S3Backend, glacier=GlacierBackend)
+STORAGE_BACKEND = dict(s3=S3Backend, glacier=GlacierBackend)
+
+def _get_store_backend(conf, destination=DEFAULT_DESTINATION):
+    if not destination:
+        destination = config.get("aws", "default_destination")
+    return STORAGE_BACKEND[destination](conf)
+
+def _match_filename(filename, destination=DEFAULT_DESTINATION, conf=None):
+    storage_backend = _get_store_backend(conf, destination)
+
+    keys = [name for name in storage_backend.ls() if name.startswith(filename)]
+    keys.sort(reverse=True)
+    return keys
+
+def match_filename(filename, destination=DEFAULT_DESTINATION, conf=None):
+    _keys = _match_filename(filename, destination, conf)
+    regex_key = re.compile(r"(.+)(\d{14})\.tgz(\.enc)?")
+    keys = []
+    for key in _keys:
+        filename, datestr, isenc = re.findall(regex_key, key)[0]
+        keys.append(dict(filename=filename,
+                        backup_date=datetime.strptime(datestr, "%Y%m%d%H%M%S"),
+                        is_enc=bool(isenc)))
+    return keys
+
 
 @app.cmd(help="Backup a file or a directory, backup the current directory if no arg is provided.")
 @app.cmd_arg('-f', '--filename', type=str, default=os.getcwd())
@@ -310,9 +337,7 @@ storage_backends = dict(s3=S3Backend, glacier=GlacierBackend)
 @app.cmd_arg('-s', '--description', type=str, default=None)
 def backup(filename, destination=None, description=None, **kwargs):
     conf = kwargs.get("conf", None)
-    if not destination:
-        destination = config.get("aws", "default_destination")
-    storage_backend = storage_backends[destination](conf)
+    storage_backend = _get_store_backend(conf, destination)
 
     log.info("Backing up " + filename)
     arcname = filename.strip('/').split('/')[-1]
@@ -345,6 +370,25 @@ def backup(filename, destination=None, description=None, **kwargs):
     storage_backend.upload(stored_filename, outname)
     os.remove(outname)
 
+    return True
+
+
+@app.cmd(help="Give informations about stored filename, current directory if no arg is provided.")
+@app.cmd_arg('-f', '--filename', type=str, default=os.getcwd())
+@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier")
+@app.cmd_arg('-s', '--description', type=str, default=None)
+def info(filename, destination=None, description=None, **kwargs):
+    conf = kwargs.get("conf", None)
+    storage_backend = _get_store_backend(conf, destination)
+    filename = filename.split("/")[-1]
+    keys = match_filename(filename, destination if destination else DEFAULT_DESTINATION)
+    if not keys:
+        return
+    key = keys[0]
+    print "Last backup date: {} ({} versions)".format(key["backup_date"].isoformat(),
+                                                    str(len(keys)))
+
+    return key
 
 @app.cmd(help="Set AWS S3/Glacier credentials.")
 def configure():
@@ -378,15 +422,13 @@ def configure():
 @app.cmd_arg('-d', '--destination', type=str, help="s3|glacier")
 def restore(filename, destination=None, **kwargs):
     conf = kwargs.get("conf", None)
-    if not destination:
-        destination = config.get("aws", "default_destination")
-    storage_backend = storage_backends[destination](conf)
+    storage_backend = _get_store_backend(conf, destination)
 
     if not filename:
         log.error("No file to restore, use -f to specify one.")
         return
 
-    keys = [name for name in storage_backend.ls() if name.startswith(filename)]
+    keys = _match_filename(filename, destination if destination else DEFAULT_DESTINATION)
     if not keys:
         log.error("No file matched.")
         return
@@ -401,7 +443,18 @@ def restore(filename, destination=None, **kwargs):
             password = getpass()
 
     log.info("Downloading...")
-    out = storage_backend.download(key_name)
+    
+    download_kwargs = {}
+    if kwargs.get("job_check"):
+        download_kwargs["job_check"] = True
+        log.info("Job Check: " + repr(download_kwargs))
+
+    out = storage_backend.download(key_name, **download_kwargs)
+
+    if kwargs.get("job_check"):
+        log.info("Job Check Request")
+        # If it's a job_check call, we return Glacier job data
+        return out
 
     if out and key_name.endswith(".enc"):
         log.info("Decrypting...")
@@ -416,38 +469,40 @@ def restore(filename, destination=None, **kwargs):
         tar.extractall()
         tar.close()
 
+        return True
+
 
 @app.cmd(help="Delete a backup.")
 @app.cmd_arg('-f', '--filename', type=str, default="")
 @app.cmd_arg('-d', '--destination', type=str, help="s3|glacier")
 def delete(filename, destination=None, **kwargs):
     conf = kwargs.get("conf", None)
-    if not destination:
-        destination = config.get("aws", "default_destination")
-    storage_backend = storage_backends[destination](conf)
+    storage_backend = _get_store_backend(conf, destination)
 
     if not filename:
         log.error("No file to delete, use -f to specify one.")
         return
 
-    keys = [name for name in storage_backend.ls() if name.startswith(filename)]
+    keys = _match_filename(filename, destination, conf)
     if not keys:
         log.error("No file matched.")
         return
 
-    key_name = sorted(keys, reverse=True)[0]
+    # Get first matching keys => the most recent
+    key_name = keys[0]
+
     log.info("Deleting " + key_name)
 
     storage_backend.delete(key_name)
+
+    return True
 
 
 @app.cmd(help="List stored backups.")
 @app.cmd_arg('-d', '--destination', type=str, help="s3|glacier")
 def ls(destination=None, **kwargs):
     conf = kwargs.get("conf", None)
-    if not destination:
-        destination = config.get("aws", "default_destination")
-    storage_backend = storage_backends[destination](conf)
+    storage_backend = _get_store_backend(conf, destination)
     
     log.info(storage_backend.container)
 
