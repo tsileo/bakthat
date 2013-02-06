@@ -21,7 +21,7 @@ from boto.exception import S3ResponseError
 from beefish import decrypt, encrypt_file
 import aaargh
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 DEFAULT_LOCATION = "us-east-1"
 DEFAULT_DESTINATION = "s3"
@@ -86,7 +86,7 @@ class S3Backend:
             else:
                 raise e
 
-        self.container = "S3 Bucket: {}".format(bucket)
+        self.container = "S3 Bucket: {0}".format(bucket)
 
     def download(self, keyname):
         k = Key(self.bucket)
@@ -100,7 +100,7 @@ class S3Backend:
 
     def cb(self, complete, total):
         percent = int(complete * 100.0 / total)
-        log.info("Upload completion: {}%".format(percent))
+        log.info("Upload completion: {0}%".format(percent))
 
     def upload(self, keyname, filename, cb=True):
         k = Key(self.bucket)
@@ -151,7 +151,7 @@ class GlacierBackend:
         self.conf = conf
         self.vault = con.create_vault(vault_name)
         self.backup_key = "bakthat_glacier_inventory"
-        self.container = "Glacier vault: {}".format(vault_name)
+        self.container = "Glacier vault: {0}".format(vault_name)
 
     def backup_inventory(self):
         """
@@ -385,7 +385,7 @@ def info(filename, destination=None, description=None, **kwargs):
     if not keys:
         return
     key = keys[0]
-    print "Last backup date: {} ({} versions)".format(key["backup_date"].isoformat(),
+    print "Last backup date: {0} ({1} versions)".format(key["backup_date"].isoformat(),
                                                     str(len(keys)))
 
     return key
@@ -397,7 +397,7 @@ def configure():
     config.set("aws", "secret_key", raw_input("AWS Secret Key: "))
     config.set("aws", "s3_bucket", raw_input("S3 Bucket Name: "))
     while 1:
-        default_destination = raw_input("Default destination ({}): ".format(DEFAULT_DESTINATION))
+        default_destination = raw_input("Default destination ({0}): ".format(DEFAULT_DESTINATION))
         if default_destination:
             default_destination = default_destination.lower()
             if default_destination in ("s3", "glacier"):
@@ -408,7 +408,7 @@ def configure():
             default_destination = DEFAULT_DESTINATION
     config.set("aws", "default_destination", default_destination)
     config.set("aws", "glacier_vault", raw_input("Glacier Vault Name: "))
-    region_name = raw_input("Region Name ({}): ".format(DEFAULT_LOCATION))
+    region_name = raw_input("Region Name ({0}): ".format(DEFAULT_LOCATION))
     if not region_name:
         region_name = DEFAULT_LOCATION
     config.set("aws", "region_name", region_name)
