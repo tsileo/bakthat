@@ -12,6 +12,8 @@ import shelve
 import json
 import re
 
+from contextlib import closing # for Python2.6 compatibility
+
 import boto
 from boto.s3.key import Key
 import boto.glacier
@@ -354,7 +356,7 @@ def backup(filename, destination=None, description=None, **kwargs):
 
     log.info("Compressing...")
     with tempfile.NamedTemporaryFile(delete=False) as out:
-        with tarfile.open(fileobj=out, mode="w:gz") as tar:
+        with closing(tarfile.open(fileobj=out, mode="w:gz")) as tar:
             tar.add(filename, arcname=arcname)
         outname = out.name
 
