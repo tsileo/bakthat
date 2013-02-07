@@ -223,6 +223,7 @@ Contributors
 - Eric Chamberlain
 - Darius Braziunas
 - Sławomir Żak
+- Andreyev Dias de Melo
 
 
 License (MIT)

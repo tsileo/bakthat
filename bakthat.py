@@ -23,7 +23,7 @@ from boto.exception import S3ResponseError
 from beefish import decrypt, encrypt_file
 import aaargh
 
-__version__ = "0.3.1"
+__version__ = "0.3.2"
 
 DEFAULT_LOCATION = "us-east-1"
 DEFAULT_DESTINATION = "s3"
@@ -193,7 +193,7 @@ class GlacierBackend:
 
 
     def upload(self, keyname, filename):
-        archive_id = self.vault.concurrent_create_archive_from_file(filename) # , keyname => second argument not on pypi yet
+        archive_id = self.vault.concurrent_create_archive_from_file(filename, keyname)
 
         # Storing the filename => archive_id data.
         with glacier_shelve() as d:
