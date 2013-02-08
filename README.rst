@@ -66,7 +66,7 @@ Overview
     $ bakthat delete -f bak
     2012-11-14 19:55:30,148 INFO: Deleting todo20121114195502.tgz.enc
 
-    $bakthat info
+    $ bakthat info
     2013-02-08 13:37:07,407 INFO: Last backup date: 2012-12-11T11:02:33 (1 versions)
 
 Requirements
@@ -161,7 +161,7 @@ Delete
 Info
 ----
 
-You can quicly check when was the last time you backuped a directory:
+You can quicly check when was the last time you backed up a directory:
 
 ::
 
