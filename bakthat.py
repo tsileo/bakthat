@@ -356,7 +356,8 @@ def match_filename(filename, destination=DEFAULT_DESTINATION, conf=None):
 @app.cmd_arg('-f', '--filename', type=str, default=os.getcwd())
 @app.cmd_arg('-d', '--destination', type=str, help="s3|glacier")
 @app.cmd_arg('-s', '--description', type=str, default=None)
-def backup(filename, destination=None, description=None, **kwargs):
+@app.cmd_arg('-p', '--prompt', type=str, help="yes|no", default="yes")
+def backup(filename, destination=None, description=None, prompt="yes", **kwargs):
     conf = kwargs.get("conf", None)
     storage_backend = _get_store_backend(conf, destination)
 
@@ -365,7 +366,7 @@ def backup(filename, destination=None, description=None, **kwargs):
     stored_filename = arcname +  datetime.now().strftime("%Y%m%d%H%M%S") + ".tgz"
     
     password = kwargs.get("password")
-    if password is None:
+    if password is None and prompt.lower() != "no":
         password = getpass("Password (blank to disable encryption): ")
         if password:
             password2 = getpass("Password confirmation: ")
