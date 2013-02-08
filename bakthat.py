@@ -23,7 +23,7 @@ from boto.exception import S3ResponseError
 from beefish import decrypt, encrypt_file
 import aaargh
 
-__version__ = "0.3.3"
+__version__ = "0.3.4"
 
 DEFAULT_LOCATION = "us-east-1"
 DEFAULT_DESTINATION = "s3"
@@ -148,7 +148,8 @@ class GlacierBackend:
             region_name = conf.get("region_name", DEFAULT_LOCATION)
 
         con = boto.connect_glacier(aws_access_key_id=access_key,
-                                    aws_secret_access_key=secret_key, region_name=region_name)
+                                    aws_secret_access_key=secret_key,
+                                    region_name=region_name)
 
         self.conf = conf
         self.vault = con.create_vault(vault_name)
@@ -159,37 +160,51 @@ class GlacierBackend:
         """
         Backup the local inventory from shelve as a json string to S3
         """
+        if config.get("aws", "s3_bucket"):
+            archives = self.load_archives()
+
+            s3_bucket = S3Backend(self.conf).bucket
+            k = Key(s3_bucket)
+            k.key = self.backup_key
+
+            k.set_contents_from_string(json.dumps(archives))
+
+            k.set_acl("private")
+
+    def load_archives(self):
+        """Fetch local inventory (stored in shelve)."""
         with glacier_shelve() as d:
             if not d.has_key("archives"):
                 d["archives"] = dict()
 
-            archives = d["archives"]
+            return d["archives"]
 
+    def load_archives_from_s3(self):
+        """Fetch latest inventory backup from S3."""
         s3_bucket = S3Backend(self.conf).bucket
-        k = Key(s3_bucket)
-        k.key = self.backup_key
+        try:
+            k = Key(s3_bucket)
+            k.key = self.backup_key
 
-        k.set_contents_from_string(json.dumps(archives))
-
-        k.set_acl("private")
-
+            return json.loads(k.get_contents_as_string())
+        except S3ResponseError, exc:
+            return {}
 
     def restore_inventory(self):
         """
         Restore inventory from S3 to local shelve
         """
-        s3_bucket = S3Backend(self.conf).bucket
-        k = Key(s3_bucket)
-        k.key = self.backup_key
+        if config.get("aws", "s3_bucket"):
+            loaded_archives = self.load_archives_from_s3()
 
-        loaded_archives = json.loads(k.get_contents_as_string())
+            with glacier_shelve() as d:
+                if not d.has_key("archives"):
+                    d["archives"] = dict()
 
-        with glacier_shelve() as d:
-            if not d.has_key("archives"):
-                d["archives"] = dict()
-
-            archives = loaded_archives
-            d["archives"] = archives
+                archives = loaded_archives
+                d["archives"] = archives
+        else:
+            raise Exception("You must set s3_bucket in order to backup/restore inventory to/from S3.")
 
 
     def upload(self, keyname, filename):
@@ -329,6 +344,7 @@ def match_filename(filename, destination=DEFAULT_DESTINATION, conf=None):
         try:
             filename, datestr, isenc = re.findall(regex_key, key)[0]
             keys.append(dict(filename=filename,
+                        key=key,
                         backup_date=datetime.strptime(datestr, "%Y%m%d%H%M%S"),
                         is_enc=bool(isenc)))
         except:
@@ -515,6 +531,22 @@ def ls(destination=None, **kwargs):
     for filename in storage_backend.ls():
         log.info(filename)
 
+@app.cmd(help="Show Glacier inventory from S3")
+def show_glacier_inventory(**kwargs):
+    if config.get("aws", "s3_bucket"):
+        conf = kwargs.get("conf", None)
+        glacier_backend = GlacierBackend(conf)
+        loaded_archives = glacier_backend.load_archives_from_s3()
+        log.info(json.dumps(loaded_archives, sort_keys=True, indent=4, separators=(',', ': ')))
+    else:
+        log.error("No S3 bucket defined.")
+
+@app.cmd(help="Show local Glacier inventory (from shelve file)")
+def show_local_glacier_inventory(**kwargs):
+    conf = kwargs.get("conf", None)
+    glacier_backend = GlacierBackend(conf)
+    archives = glacier_backend.load_archives()
+    log.info(json.dumps(archives, sort_keys=True, indent=4, separators=(',', ': ')))
 
 @app.cmd(help="Backup Glacier inventory to S3")
 def backup_glacier_inventory(**kwargs):

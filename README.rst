@@ -17,6 +17,8 @@ Here are some features:
 
 You can restore backups **with** or **without** bakthat, you just have to download the backup, decrypt it with `Beefish <http://pypi.python.org/pypi/beefish>`_ command-line tool and untar it.
 
+Be careful, if you want to be able to **backup/restore your glacier inventory**, you need **to setup a S3 Bucket even if you are planning to use bakthat exclusively with glacier**, all the archives ids are stored under JSON format in a S3 Key.
+
 Overview
 ========
 
@@ -161,7 +163,7 @@ Delete
 Info
 ----
 
-You can quicly check when was the last time you backed up a directory:
+You can quickly check when was the last time you backed up a directory:
 
 ::
 
@@ -172,6 +174,18 @@ Backup/Restore Glacier inventory
 --------------------------------
 
 Bakthat automatically backups the local Glacier inventory (a dict with filename => archive_id mapping) to your S3 bucket under the "bakthat_glacier_inventory" key.
+
+You can retrieve bakthat custom inventory without waiting:
+
+::
+
+    $ bakthat show_glacier_inventory
+
+or
+
+::
+
+    $ bakthat show_local_glacier_inventory
 
 You can trigger a backup mannualy:
 

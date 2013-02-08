@@ -5,6 +5,8 @@ import os
 import time
 import unittest
 
+config = bakthat.config
+
 class BakthatTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -61,28 +63,65 @@ class BakthatTestCase(unittest.TestCase):
     def test_glacier_backup_restore(self):
         if raw_input("Test glacier upload/download ? It can take up to 4 hours ! (y/N): ").lower() == "y":
 
+            # Backup dummy file
             bakthat.backup(self.test_file.name, "glacier", password="")
 
+            # Check that file is showing up in bakthat ls
             self.assertEqual(bakthat.match_filename(self.test_filename, "glacier")[0]["filename"],
                             self.test_filename)
 
+
+            # We initialize glacier backend 
+            # to check that the file appear in both local and remote (S3) inventory
+            glacier_backend = bakthat.GlacierBackend(None)
+            
+            archives = glacier_backend.load_archives()
+            archives_s3 = glacier_backend.load_archives_from_s3()
+
+            # Check that local and remote custom inventory are equal
+            self.assertEqual(archives, archives_s3)
+
+            # Next we check that the file is stored in both inventories
+            inventory_key_name = bakthat.match_filename(self.test_filename, "glacier")[0]["key"]
+
+            self.assertTrue(inventory_key_name in archives)
+            self.assertTrue(inventory_key_name in archives_s3)
+
+            # Restore backup
             job = bakthat.restore(self.test_filename, "glacier", job_check=True)
             
+            # Check that a job is initiated
             self.assertEqual(job.__dict__["action"], "ArchiveRetrieval")
             self.assertEqual(job.__dict__["status_code"], "InProgress")
 
             while 1:
+                # Check every ten minutes if the job is done
                 result = bakthat.restore(self.test_filename, "glacier")
+                
+                # If job is done, we can download the file
                 if result:
                     restored_hash = hashlib.sha1(open(self.test_filename).read()).hexdigest()
         
+                    # Check if the hash of the restored file is equal to inital file hash
                     self.assertEqual(self.test_hash, restored_hash)
 
                     os.remove(self.test_filename)
 
+                    # Now, we can delete the restored file
                     bakthat.delete(self.test_filename, "glacier")
 
+                    # Check that the file is deleted
                     self.assertEqual(bakthat.match_filename(self.test_filename, "glacier"), [])
+
+                    archives = glacier_backend.load_archives()
+                    archives_s3 = glacier_backend.load_archives_from_s3()
+
+                    # Check if the file has been removed from both archives
+                    self.assertEqual(archives, archives_s3) 
+
+                    self.assertTrue(inventory_key_name not in archives)
+                    self.assertTrue(inventory_key_name not in archives_s3)
+
                     break
                 else:
                     time.sleep(600)
