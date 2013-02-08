@@ -66,6 +66,8 @@ Overview
     $ bakthat delete -f bak
     2012-11-14 19:55:30,148 INFO: Deleting todo20121114195502.tgz.enc
 
+    $bakthat info
+    2013-02-08 13:37:07,407 INFO: Last backup date: 2012-12-11T11:02:33 (1 versions)
 
 Requirements
 ============
@@ -97,6 +99,7 @@ Basic usage, "bakthat -h" or "bakthat <command> -h" to show the help.
 
 S3 is the default destination, to use Glacier just add "-d glacier" or "--destination glacier".
 
+You can change the temp directory location by setting the TMPDIR, TEMP or TMP environment variables if the backup is too big to fit in the default temp directory.
 
 Backup
 ------
@@ -154,6 +157,15 @@ Delete
     $ bakthat delete -f bak
 
     $ bakthat delete -f bak -d glacier
+
+Info
+----
+
+You can quicly check when was the last time you backuped a directory:
+
+::
+
+    $ bakthat info
 
 
 Backup/Restore Glacier inventory

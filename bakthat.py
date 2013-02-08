@@ -23,7 +23,7 @@ from boto.exception import S3ResponseError
 from beefish import decrypt, encrypt_file
 import aaargh
 
-__version__ = "0.3.2"
+__version__ = "0.3.3"
 
 DEFAULT_LOCATION = "us-east-1"
 DEFAULT_DESTINATION = "s3"
@@ -326,10 +326,13 @@ def match_filename(filename, destination=DEFAULT_DESTINATION, conf=None):
     regex_key = re.compile(r"(.+)(\d{14})\.tgz(\.enc)?")
     keys = []
     for key in _keys:
-        filename, datestr, isenc = re.findall(regex_key, key)[0]
-        keys.append(dict(filename=filename,
+        try:
+            filename, datestr, isenc = re.findall(regex_key, key)[0]
+            keys.append(dict(filename=filename,
                         backup_date=datetime.strptime(datestr, "%Y%m%d%H%M%S"),
                         is_enc=bool(isenc)))
+        except:
+            pass # If the file has been backed up with an older version of bakthat
     return keys
 
 
@@ -385,11 +388,12 @@ def info(filename, destination=None, description=None, **kwargs):
     filename = filename.split("/")[-1]
     keys = match_filename(filename, destination if destination else DEFAULT_DESTINATION)
     if not keys:
-        return
-    key = keys[0]
-    print "Last backup date: {0} ({1} versions)".format(key["backup_date"].isoformat(),
-                                                    str(len(keys)))
-
+        log.info("No matching bakup found for " + str(filename))
+        key = None
+    else:
+        key = keys[0]
+        log.info("Last backup date: {0} ({1} versions)".format(key["backup_date"].isoformat(),
+                                                    str(len(keys))))
     return key
 
 @app.cmd(help="Set AWS S3/Glacier credentials.")
