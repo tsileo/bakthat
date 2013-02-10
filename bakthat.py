@@ -405,7 +405,7 @@ def info(filename, destination=None, description=None, **kwargs):
     filename = filename.split("/")[-1]
     keys = match_filename(filename, destination if destination else DEFAULT_DESTINATION)
     if not keys:
-        log.info("No matching bakup found for " + str(filename))
+        log.info("No matching backup found for " + str(filename))
         key = None
     else:
         key = keys[0]
