@@ -250,6 +250,7 @@ Contributors
 - Darius Braziunas
 - Sławomir Żak
 - Andreyev Dias de Melo
+- Jake McGraw
 
 
 License (MIT)
