@@ -7,7 +7,7 @@ def read(fname):
 
 setup(
     name = "bakthat",
-    version = "0.3.4",
+    version = "0.3.5",
     author = "Thomas Sileo",
     author_email = "thomas.sileo@gmail.com",
     description = "Compress, encrypt (symmetric encryption) and upload files directly to Amazon S3/Glacier in a single command. Can also be used as a python module.",
