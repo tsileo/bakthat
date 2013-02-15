@@ -25,7 +25,7 @@ from boto.exception import S3ResponseError
 from beefish import decrypt, encrypt_file
 import aaargh
 
-__version__ = "0.3.6"
+__version__ = "0.3.7"
 
 DEFAULT_LOCATION = "us-east-1"
 DEFAULT_DESTINATION = "s3"
@@ -259,7 +259,7 @@ class GlacierBackend:
                 try:
                     job = self.vault.get_job(job_id)
                 except UnexpectedHTTPResponseError: # Return a 404 if the job is no more available
-                    del job[keyname]
+                    del jobs[keyname]
 
             if not job:
                 # Job initialization
