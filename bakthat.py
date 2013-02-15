@@ -25,7 +25,7 @@ from boto.exception import S3ResponseError
 from beefish import decrypt, encrypt_file
 import aaargh
 
-__version__ = "0.3.5"
+__version__ = "0.3.6"
 
 DEFAULT_LOCATION = "us-east-1"
 DEFAULT_DESTINATION = "s3"
