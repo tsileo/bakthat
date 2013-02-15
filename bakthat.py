@@ -11,6 +11,8 @@ import logging
 import shelve
 import json
 import re
+import socket
+import math
 
 from contextlib import closing # for Python2.6 compatibility
 
@@ -273,7 +275,13 @@ class GlacierBackend:
         if job.completed:
             log.info("Downloading...")
             encrypted_out = tempfile.TemporaryFile()
-            encrypted_out.write(job.get_output().read())
+
+            # Boto related, download the file in chunk
+            chunk_size = 4 * 1024 * 1024
+            num_chunks = int(math.ceil(job.archive_size / float(chunk_size)))
+            job._download_to_fileob(encrypted_out, num_chunks, chunk_size,
+                                     True, (socket.error,))
+
             encrypted_out.seek(0)
             return encrypted_out
         else:
