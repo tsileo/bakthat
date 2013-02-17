@@ -14,6 +14,7 @@ import re
 import socket
 import httplib
 import math
+import mimetypes
 
 from contextlib import closing # for Python2.6 compatibility
 
@@ -91,8 +92,8 @@ class S3Backend(BakthatBackend):
     """
     Backend to handle S3 upload/download
     """
-    def __init__(self, conf):
-        BakthatBackend.__init__(self, extra_conf=["s3_bucket"])
+    def __init__(self, conf=None):
+        BakthatBackend.__init__(self, conf, extra_conf=["s3_bucket"])
 
         con = boto.connect_s3(self.conf["access_key"], self.conf["secret_key"])
 
@@ -146,8 +147,8 @@ class GlacierBackend(BakthatBackend):
     """
     Backend to handle Glacier upload/download
     """
-    def __init__(self, conf):
-        BakthatBackend.__init__(self, extra_conf=["glacier_vault"])
+    def __init__(self, conf=None):
+        BakthatBackend.__init__(self, conf, extra_conf=["glacier_vault"])
 
         con = boto.connect_glacier(aws_access_key_id=self.conf["access_key"],
                                     aws_secret_access_key=self.conf["secret_key"],
@@ -371,7 +372,8 @@ def backup(filename, destination=None, description=None, prompt="yes", **kwargs)
 
     log.info("Backing up " + filename)
     arcname = filename.strip('/').split('/')[-1]
-    stored_filename = arcname +  datetime.now().strftime("%Y%m%d%H%M%S") + ".tgz"
+    date_component = datetime.now().strftime("%Y%m%d%H%M%S")
+    stored_filename = arcname +  date_component + ".tgz"
     
     password = kwargs.get("password")
     if password is None and prompt.lower() != "no":
@@ -382,11 +384,22 @@ def backup(filename, destination=None, description=None, prompt="yes", **kwargs)
                 log.error("Password confirmation doesn't match")
                 return
 
-    log.info("Compressing...")
-    with tempfile.NamedTemporaryFile(delete=False) as out:
-        with closing(tarfile.open(fileobj=out, mode="w:gz")) as tar:
-            tar.add(filename, arcname=arcname)
-        outname = out.name
+    if mimetypes.guess_type(arcname) == ('application/x-tar', 'gzip'):
+        log.info("File already compressed")
+        outname = filename
+
+        new_arcname = re.sub(r'(\.t(ar\.)?gz)', '', arcname)
+        stored_filename = new_arcname + date_component + ".tgz"
+
+        bakthat_compression = False
+    else:
+        log.info("Compressing...")
+        with tempfile.NamedTemporaryFile(delete=False) as out:
+            with closing(tarfile.open(fileobj=out, mode="w:gz")) as tar:
+                tar.add(filename, arcname=arcname)
+            outname = out.name
+
+        bakthat_compression = True
 
     if password:
         log.info("Encrypting...")
@@ -398,7 +411,10 @@ def backup(filename, destination=None, description=None, prompt="yes", **kwargs)
 
     log.info("Uploading...")
     storage_backend.upload(stored_filename, outname)
-    os.remove(outname)
+
+    # We only remove the file if the archive is created by bakthat
+    if bakthat_compression:
+        os.remove(outname)
 
     return True
 
