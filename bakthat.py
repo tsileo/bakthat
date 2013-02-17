@@ -401,19 +401,26 @@ def backup(filename, destination=None, description=None, prompt="yes", **kwargs)
 
         bakthat_compression = True
 
+    bakthat_encryption = False
     if password:
         log.info("Encrypting...")
         encrypted_out = tempfile.NamedTemporaryFile(delete=False)
         encrypt_file(outname, encrypted_out.name, password)
         stored_filename += ".enc"
-        os.remove(outname)  # remove non-encrypted tmp file
+
+        # We only remove the file if the archive is created by bakthat
+        if bakthat_compression:
+            os.remove(outname)  # remove non-encrypted tmp file
+
         outname = encrypted_out.name
+
+        bakthat_encryption = True
 
     log.info("Uploading...")
     storage_backend.upload(stored_filename, outname)
 
     # We only remove the file if the archive is created by bakthat
-    if bakthat_compression:
+    if bakthat_encryption:
         os.remove(outname)
 
     return True
