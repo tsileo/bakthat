@@ -55,43 +55,60 @@ class glacier_shelve(object):
         self.shelve.close()
 
 
-class S3Backend:
-    """
-    Backend to handle S3 upload/download
-    """
-    def __init__(self, conf):
+class BakthatBackend:
+    """Handle Configuration for Backends."""
+    def __init__(self, conf=None, extra_conf=[]):
+        self.custom_conf = None
+        self.conf = {}
         if conf is None:
             try:
-                access_key = config.get("aws", "access_key")
-                secret_key = config.get("aws", "secret_key")
-                bucket = config.get("aws", "s3_bucket")
-                try:
-                    region_name = config.get("aws", "region_name")
-                except ConfigParser.NoOptionError:
-                    region_name = DEFAULT_LOCATION
+                self.conf["access_key"] = config.get("aws", "access_key")
+                self.conf["secret_key"] = config.get("aws", "secret_key")
+                self.conf["region_name"] = config.get("aws", "region_name")
+
+                for key in extra_conf:
+                    try:
+                        self.conf[key] = config.get("aws", key)
+                    except Exception, exc:
+                        log.exception(exc)
+                        log.error("Missing configuration variable")
+                        self.conf[key] = None
+
             except ConfigParser.NoOptionError:
                 log.error("Configuration file not available.")
                 log.info("Use 'bakthat configure' to create one.")
                 return
         else:
-            access_key = conf.get("access_key")
-            secret_key = conf.get("secret_key")
-            bucket = conf.get("bucket")
-            region_name = conf.get("region_name", DEFAULT_LOCATION)
+            self.conf["access_key"] = conf.get("access_key")
+            self.conf["secret_key"] = conf.get("secret_key")
+            self.conf["region_name"] = conf.get("region_name", DEFAULT_LOCATION)
 
-        con = boto.connect_s3(access_key, secret_key)
+            for key in extra_conf:
+                self.conf[key] = conf.get(key)
+
+
+class S3Backend(BakthatBackend):
+    """
+    Backend to handle S3 upload/download
+    """
+    def __init__(self, conf):
+        BakthatBackend.__init__(self, extra_conf=["s3_bucket"])
+
+        con = boto.connect_s3(self.conf["access_key"], self.conf["secret_key"])
+
+        region_name = self.conf["region_name"]
         if region_name == DEFAULT_LOCATION:
             region_name = ""
 
         try:
-            self.bucket = con.get_bucket(bucket)
+            self.bucket = con.get_bucket(self.conf["s3_bucket"])
         except S3ResponseError, e:
             if e.code == "NoSuchBucket":
-                self.bucket = con.create_bucket(bucket, location=region_name)
+                self.bucket = con.create_bucket(self.conf["s3_bucket"], location=region_name)
             else:
                 raise e
 
-        self.container = "S3 Bucket: {0}".format(bucket)
+        self.container = "S3 Bucket: {0}".format(self.conf["s3_bucket"])
 
     def download(self, keyname):
         k = Key(self.bucket)
@@ -125,39 +142,21 @@ class S3Backend:
         self.bucket.delete_key(k)
 
 
-
-class GlacierBackend:
+class GlacierBackend(BakthatBackend):
     """
     Backend to handle Glacier upload/download
     """
     def __init__(self, conf):
-        if conf is None:
-            try:
-                access_key = config.get("aws", "access_key")
-                secret_key = config.get("aws", "secret_key")
-                vault_name = config.get("aws", "glacier_vault")
-                try:
-                    region_name = config.get("aws", "region_name")
-                except ConfigParser.NoOptionError:
-                    region_name = DEFAULT_LOCATION
-            except ConfigParser.NoOptionError:
-                log.error("Configuration file not available.")
-                log.info("Use 'bakthat configure' to create one.")
-                return
-        else:
-            access_key = conf.get("access_key")
-            secret_key = conf.get("secret_key")
-            vault_name = conf.get("vault")
-            region_name = conf.get("region_name", DEFAULT_LOCATION)
+        BakthatBackend.__init__(self, extra_conf=["glacier_vault"])
 
-        con = boto.connect_glacier(aws_access_key_id=access_key,
-                                    aws_secret_access_key=secret_key,
-                                    region_name=region_name)
+        con = boto.connect_glacier(aws_access_key_id=self.conf["access_key"],
+                                    aws_secret_access_key=self.conf["secret_key"],
+                                    region_name=self.conf["region_name"])
 
-        self.conf = conf
-        self.vault = con.create_vault(vault_name)
+        self.vault = con.create_vault(self.conf["glacier_vault"])
         self.backup_key = "bakthat_glacier_inventory"
-        self.container = "Glacier vault: {0}".format(vault_name)
+        self.container = "Glacier vault: {0}".format(self.conf["glacier_vault"])
+
 
     def backup_inventory(self):
         """
