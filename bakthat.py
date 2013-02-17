@@ -372,7 +372,7 @@ def backup(filename, destination=None, description=None, prompt="yes", **kwargs)
 
     log.info("Backing up " + filename)
     arcname = filename.strip('/').split('/')[-1]
-    date_component = datetime.now().strftime("%Y%m%d%H%M%S")
+    date_component = datetime.utcnow().strftime("%Y%m%d%H%M%S")
     stored_filename = arcname +  date_component + ".tgz"
     
     password = kwargs.get("password")
