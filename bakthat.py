@@ -12,6 +12,7 @@ import shelve
 import json
 import re
 import socket
+import httplib
 import math
 
 from contextlib import closing # for Python2.6 compatibility
@@ -280,7 +281,7 @@ class GlacierBackend:
             chunk_size = 4 * 1024 * 1024
             num_chunks = int(math.ceil(job.archive_size / float(chunk_size)))
             job._download_to_fileob(encrypted_out, num_chunks, chunk_size,
-                                     True, (socket.error,))
+                                     True, (socket.error, httplib.IncompleteRead))
 
             encrypted_out.seek(0)
             return encrypted_out
