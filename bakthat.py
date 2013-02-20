@@ -375,6 +375,8 @@ def backup(filename, destination=None, description=None, prompt="yes", **kwargs)
     date_component = datetime.utcnow().strftime("%Y%m%d%H%M%S")
     stored_filename = arcname +  date_component + ".tgz"
     
+    backup_data = dict(filename=arcname)
+
     password = kwargs.get("password")
     if password is None and prompt.lower() != "no":
         password = getpass("Password (blank to disable encryption): ")
@@ -390,6 +392,9 @@ def backup(filename, destination=None, description=None, prompt="yes", **kwargs)
 
         new_arcname = re.sub(r'(\.t(ar\.)?gz)', '', arcname)
         stored_filename = new_arcname + date_component + ".tgz"
+        
+        with open(outname) as outfile:
+            backup_data["size"] = os.fstat(outfile.fileno()).st_size
 
         bakthat_compression = False
     else:
@@ -398,11 +403,13 @@ def backup(filename, destination=None, description=None, prompt="yes", **kwargs)
             with closing(tarfile.open(fileobj=out, mode="w:gz")) as tar:
                 tar.add(filename, arcname=arcname)
             outname = out.name
-
+            out.seek(0)
+            backup_data["size"] = os.fstat(out.fileno()).st_size
         bakthat_compression = True
 
     bakthat_encryption = False
     if password:
+        bakthat_encryption = True
         log.info("Encrypting...")
         encrypted_out = tempfile.NamedTemporaryFile(delete=False)
         encrypt_file(outname, encrypted_out.name, password)
@@ -414,7 +421,12 @@ def backup(filename, destination=None, description=None, prompt="yes", **kwargs)
 
         outname = encrypted_out.name
 
-        bakthat_encryption = True
+        encrypted_out.seek(0)
+        backup_data["size"] = os.fstat(encrypted_out.fileno()).st_size
+
+
+    backup_data["metadata"] = dict(is_enc=bakthat_encryption)
+    backup_data["stored_filename"] = stored_filename
 
     log.info("Uploading...")
     storage_backend.upload(stored_filename, outname)
@@ -423,7 +435,8 @@ def backup(filename, destination=None, description=None, prompt="yes", **kwargs)
     if bakthat_encryption:
         os.remove(outname)
 
-    return True
+    log.debug(backup_data)
+    return backup_data
 
 
 @app.cmd(help="Give informations about stored filename, current directory if no arg is provided.")
@@ -560,8 +573,12 @@ def ls(destination=None, **kwargs):
     
     log.info(storage_backend.container)
 
-    for filename in storage_backend.ls():
+    ls_result = storage_backend.ls()
+
+    for filename in ls_result:
         log.info(filename)
+
+    return ls_result
 
 @app.cmd(help="Show Glacier inventory from S3")
 def show_glacier_inventory(**kwargs):
