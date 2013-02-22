@@ -4,9 +4,6 @@ Bakthat
 
 Compress, encrypt (symmetric encryption) and upload files directly to Amazon S3/Glacier in a single command. Can also be used as a python module.
 
-While navigating directories, I was tired of telling myself I should backup these #?!!* small files/directories.
-Since I didn't found any solution that allows me to quickly perform encrypted backup on Amazon S3 from command-line, I wrote bakthat !
-
 Here are some features:
 
 * Compress with `tarfile <http://docs.python.org/library/tarfile.html>`_

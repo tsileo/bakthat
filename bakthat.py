@@ -85,7 +85,7 @@ class BakthatBackend:
                     log.info("Use 'bakthat configure' to create one.")
                 else:
                     log.error("No {0} section available in configuration file.".format(section))
-                return
+
         else:
             if section == "aws":
                 self.conf["access_key"] = conf.get("access_key")
@@ -435,6 +435,8 @@ def delete_older_than(filename, interval, destination=DEFAULT_DESTINATION, conf=
 def rotate_backups(filename, destination=DEFAULT_DESTINATION, conf=None):
     storage_backend = _get_store_backend(conf, destination)
     rotate = RotationConfig(conf)
+    if not rotate:
+        raise Exception("You must run bakthat configure_backups_rotation or provide rotation configuration.")
 
     deleted = []
 
@@ -555,7 +557,9 @@ def info(filename, destination=None, description=None, **kwargs):
 
 @app.cmd(help="Set AWS S3/Glacier credentials.")
 def configure():
-    config.add_section("aws")
+    if not config.has_section("aws"):
+        config.add_section("aws")
+    
     config.set("aws", "access_key", raw_input("AWS Access Key: "))
     config.set("aws", "secret_key", raw_input("AWS Secret Key: "))
     config.set("aws", "s3_bucket", raw_input("S3 Bucket Name: "))
@@ -583,7 +587,8 @@ def configure():
 
 @app.cmd(help="Configure backups rotation")
 def configure_backups_rotation():
-    config.add_section("rotation")
+    if not config.has_section("rotation"):
+        config.add_section("rotation")
     config.set("rotation", "days", raw_input("Number of days to keep: "))
     config.set("rotation", "weeks", raw_input("Number of weeks to keep: "))
     config.set("rotation", "months", raw_input("Number of months to keep: "))
