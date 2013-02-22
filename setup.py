@@ -17,7 +17,7 @@ setup(
     py_modules=['bakthat'],
     long_description= read('README.rst'),
     install_requires=[
-        "aaargh", "boto", "pycrypto", "beefish"
+        "aaargh", "boto", "pycrypto", "beefish", "grandfatherson"
         ],
     entry_points={'console_scripts': ["bakthat = bakthat:main"]},
     classifiers=[

@@ -14,6 +14,7 @@ Here are some features:
 * Upload/download to S3 or Glacier with `boto <http://pypi.python.org/pypi/boto>`_
 * Local Glacier inventory stored with `shelve <http://docs.python.org/library/shelve.html>`_
 * Automatically handle/backup/restore a custom Glacier inventory to S3
+* Delete older than, and Grandfather-father-son backup rotation supported
 
 You can restore backups **with** or **without** bakthat, you just have to download the backup, decrypt it with `Beefish <http://pypi.python.org/pypi/beefish>`_ command-line tool and untar it.
 
@@ -78,7 +79,7 @@ Requirements
 * `Pycrypto <https://www.dlitz.net/software/pycrypto/>`_
 * `Beefish <http://pypi.python.org/pypi/beefish>`_
 * `Boto <http://pypi.python.org/pypi/boto>`_
-
+* `Grandfatherson <https://pypi.python.org/pypi/GrandFatherSon>`_
 
 Installation
 ============

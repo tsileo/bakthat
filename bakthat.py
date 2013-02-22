@@ -15,6 +15,7 @@ import socket
 import httplib
 import math
 import mimetypes
+import calendar
 
 from contextlib import closing # for Python2.6 compatibility
 
@@ -26,6 +27,7 @@ from boto.glacier.exceptions import UnexpectedHTTPResponseError
 from boto.exception import S3ResponseError
 from beefish import decrypt, encrypt_file
 import aaargh
+import grandfatherson
 
 __version__ = "0.3.7"
 
@@ -59,35 +61,45 @@ class glacier_shelve(object):
 
 class BakthatBackend:
     """Handle Configuration for Backends."""
-    def __init__(self, conf=None, extra_conf=[]):
+    def __init__(self, conf=None, extra_conf=[], section="aws"):
         self.custom_conf = None
         self.conf = {}
         if conf is None:
             try:
-                self.conf["access_key"] = config.get("aws", "access_key")
-                self.conf["secret_key"] = config.get("aws", "secret_key")
-                self.conf["region_name"] = config.get("aws", "region_name")
+                if section == "aws":
+                    self.conf["access_key"] = config.get(section, "access_key")
+                    self.conf["secret_key"] = config.get(section, "secret_key")
+                    self.conf["region_name"] = config.get(section, "region_name")
 
                 for key in extra_conf:
                     try:
-                        self.conf[key] = config.get("aws", key)
+                        self.conf[key] = config.get(section, key)
                     except Exception, exc:
                         log.exception(exc)
-                        log.error("Missing configuration variable")
+                        log.error("Missing configuration variable.")
                         self.conf[key] = None
 
             except ConfigParser.NoOptionError:
-                log.error("Configuration file not available.")
-                log.info("Use 'bakthat configure' to create one.")
+                if section == "aws":
+                    log.error("Configuration file not available.")
+                    log.info("Use 'bakthat configure' to create one.")
+                else:
+                    log.error("No {0} section available in configuration file.".format(section))
                 return
         else:
-            self.conf["access_key"] = conf.get("access_key")
-            self.conf["secret_key"] = conf.get("secret_key")
-            self.conf["region_name"] = conf.get("region_name", DEFAULT_LOCATION)
+            if section == "aws":
+                self.conf["access_key"] = conf.get("access_key")
+                self.conf["secret_key"] = conf.get("secret_key")
+                self.conf["region_name"] = conf.get("region_name", DEFAULT_LOCATION)
 
             for key in extra_conf:
                 self.conf[key] = conf.get(key)
 
+class RotationConfig(BakthatBackend):
+    def __init__(self, conf=None):
+        BakthatBackend.__init__(self, conf, 
+                                extra_conf=["days", "weeks", "months", "first_week_day"],
+                                section="rotation")
 
 class S3Backend(BakthatBackend):
     """
@@ -417,6 +429,31 @@ def delete_older_than(filename, interval, destination=DEFAULT_DESTINATION, conf=
 
     return deleted
 
+@app.cmd(help="Rotate backups using Grandfather-father-son backup rotation scheme.")
+@app.cmd_arg('-f', '--filename', type=str, default=os.getcwd())
+@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier")
+def rotate_backups(filename, days=7, weeks=4, month=6, destination=DEFAULT_DESTINATION, conf=None):
+    storage_backend = _get_store_backend(conf, destination)
+    rotate = RotationConfig(conf)
+
+    deleted = []
+
+    backups = match_filename(filename, destination, conf)
+    backups_date = [backup["backup_date"] for backup in backups]
+
+    to_delete = grandfatherson.to_delete(backups_date, days=int(rotate.conf["days"]),
+                                                    weeks=int(rotate.conf["weeks"]),
+                                                    months=int(rotate.conf["months"]),
+                                                    now=datetime.utcnow())
+    
+    for key in backups:
+        if key.get("backup_date") in to_delete:
+            real_key = key.get("key")
+            log.info("Deleting {0}".format(real_key))
+            storage_backend.delete(real_key)
+            deleted.append(real_key)
+
+    return deleted
 
 @app.cmd(help="Backup a file or a directory, backup the current directory if no arg is provided.")
 @app.cmd_arg('-f', '--filename', type=str, default=os.getcwd())
@@ -531,6 +568,8 @@ def configure():
                 log.error("Invalid default_destination, should be s3 or glacier, try again.")
         else:
             default_destination = DEFAULT_DESTINATION
+            break
+
     config.set("aws", "default_destination", default_destination)
     config.set("aws", "glacier_vault", raw_input("Glacier Vault Name: "))
     region_name = raw_input("Region Name ({0}): ".format(DEFAULT_LOCATION))
@@ -541,6 +580,27 @@ def configure():
 
     log.info("Config written in %s" % os.path.expanduser("~/.bakthat.conf"))
 
+@app.cmd(help="Configure backups rotation")
+def configure_backups_rotation():
+    config.add_section("rotation")
+    config.set("rotation", "days", raw_input("Number of days to keep: "))
+    config.set("rotation", "weeks", raw_input("Number of weeks to keep: "))
+    config.set("rotation", "months", raw_input("Number of months to keep: "))
+    while 1:
+        first_week_day = raw_input("First week day (to calculate wich weekly backup keep, saturday by default): ")
+        if first_week_day:
+            if hasattr(calendar, first_week_day.upper()):
+                first_week_day = getattr(calendar, first_week_day.upper())
+                break
+            else:
+                log.error("Invalid first_week_day, please choose from sunday to saturday.")
+        else:
+            first_week_day = calendar.SATURDAY
+            break
+
+    config.set("rotation", "first_week_day", str(first_week_day))
+    config.write(open(os.path.expanduser("~/.bakthat.conf"), "w"))
+    log.info("Config written in %s" % os.path.expanduser("~/.bakthat.conf"))
 
 @app.cmd(help="Restore backup in the current directory.")
 @app.cmd_arg('-f', '--filename', type=str, default="")
