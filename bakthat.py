@@ -161,7 +161,7 @@ class GlacierBackend(BakthatBackend):
     Backend to handle Glacier upload/download
     """
     def __init__(self, conf=None):
-        BakthatBackend.__init__(self, conf, extra_conf=["glacier_vault"])
+        BakthatBackend.__init__(self, conf, extra_conf=["glacier_vault", "s3_bucket"])
 
         con = boto.connect_glacier(aws_access_key_id=self.conf["access_key"],
                                     aws_secret_access_key=self.conf["secret_key"],
@@ -469,10 +469,11 @@ def backup(filename, destination=None, description=None, prompt="yes", **kwargs)
 
     log.info("Backing up " + filename)
     arcname = filename.strip('/').split('/')[-1]
-    date_component = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+    now = datetime.utcnow()
+    date_component = now.strftime("%Y%m%d%H%M%S")
     stored_filename = arcname +  date_component + ".tgz"
     
-    backup_data = dict(filename=arcname)
+    backup_data = dict(filename=arcname, backup_date=now)
 
     password = kwargs.get("password")
     if password is None and prompt.lower() != "no":
