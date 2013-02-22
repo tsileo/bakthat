@@ -400,12 +400,17 @@ def delete_older_than(filename, interval, destination=DEFAULT_DESTINATION, conf=
     storage_backend = _get_store_backend(conf, destination)
     interval_seconds = _interval_string_to_seconds(interval)
 
+    deleted = []
+
     for key in match_filename(filename, destination, conf):
         backup_age =  _timedelta_total_seconds(datetime.utcnow() - key.get("backup_date"))
         if backup_age > interval_seconds:
             real_key = key.get("key")
             log.info("Deleting {0}".format(real_key))
             storage_backend.delete(real_key)
+            deleted.append(real_key)
+
+    return deleted
 
 
 @app.cmd(help="Backup a file or a directory, backup the current directory if no arg is provided.")
