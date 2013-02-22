@@ -5,8 +5,10 @@ import hashlib
 import os
 import time
 import unittest
+import logging
 
 config = bakthat.config
+log = logging.getLogger(__name__)
 
 class BakthatTestCase(unittest.TestCase):
 
@@ -30,7 +32,8 @@ class BakthatTestCase(unittest.TestCase):
 
 
     def test_s3_backup_restore(self):
-        bakthat.backup(self.test_file.name, "s3", password="")
+        backup_data = bakthat.backup(self.test_file.name, "s3", password="")
+        log.info(backup_data)
 
         self.assertEqual(bakthat.match_filename(self.test_filename, "s3")[0]["filename"],
                         self.test_filename)

@@ -69,6 +69,11 @@ Overview
     $ bakthat info
     2013-02-08 13:37:07,407 INFO: Last backup date: 2012-12-11T11:02:33 (1 versions)
 
+    >>> import bakthat
+    >>> bakthat.backup("/dir/to/bak")
+    {'stored_filename': 'bak20130222171513.tgz', 'size': 154, 'metadata': {'is_enc': False}, 'filename': 'bak'}
+
+
 Requirements
 ============
 
@@ -169,7 +174,7 @@ You can quickly check when was the last time you backed up a directory:
 Delete older than
 -----------------
 
-Delete backup older than the given interval, unit supported:
+Delete backup older than the given interval.
 
 - **s** seconds
 - **m** minutes
@@ -237,9 +242,11 @@ As a module
 ::
 
     import bakthat
-    aws_conf = {"access_key":"", "secret_key":"", "bucket": "", "vault": ""}
+    aws_conf = {"access_key":"", "secret_key":"", "s3_bucket": "", "glacier_vault": ""}
 
     bakthat.backup("/dir/i/wanto/bak", conf=aws_conf)
+    # return {'stored_filename': 'bak20130222171513.tgz', 'size': 154, 'metadata': {'is_enc': False}, 'filename': 'bak'}
+
     bakthat.backup("/dir/i/wanto/bak", conf=aws_conf, destination="glacier")
 
     # or if you want to have generated the configuration file with "bakthat configure"
