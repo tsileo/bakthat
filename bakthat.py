@@ -29,7 +29,7 @@ from beefish import decrypt, encrypt_file
 import aaargh
 import grandfatherson
 
-__version__ = "0.3.7"
+__version__ = "0.3.8"
 
 DEFAULT_LOCATION = "us-east-1"
 DEFAULT_DESTINATION = "s3"
@@ -432,7 +432,7 @@ def delete_older_than(filename, interval, destination=DEFAULT_DESTINATION, conf=
 @app.cmd(help="Rotate backups using Grandfather-father-son backup rotation scheme.")
 @app.cmd_arg('-f', '--filename', type=str, default=os.getcwd())
 @app.cmd_arg('-d', '--destination', type=str, help="s3|glacier")
-def rotate_backups(filename, days=7, weeks=4, month=6, destination=DEFAULT_DESTINATION, conf=None):
+def rotate_backups(filename, destination=DEFAULT_DESTINATION, conf=None):
     storage_backend = _get_store_backend(conf, destination)
     rotate = RotationConfig(conf)
 
@@ -444,6 +444,7 @@ def rotate_backups(filename, days=7, weeks=4, month=6, destination=DEFAULT_DESTI
     to_delete = grandfatherson.to_delete(backups_date, days=int(rotate.conf["days"]),
                                                     weeks=int(rotate.conf["weeks"]),
                                                     months=int(rotate.conf["months"]),
+                                                    firstweekday=int(rotate.conf["first_week_day"]),
                                                     now=datetime.utcnow())
     
     for key in backups:

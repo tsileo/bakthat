@@ -14,7 +14,7 @@ Here are some features:
 * Upload/download to S3 or Glacier with `boto <http://pypi.python.org/pypi/boto>`_
 * Local Glacier inventory stored with `shelve <http://docs.python.org/library/shelve.html>`_
 * Automatically handle/backup/restore a custom Glacier inventory to S3
-* Delete older than, and Grandfather-father-son backup rotation supported
+* Delete older than, and `Grandfather-father-son backup rotation <http://en.wikipedia.org/wiki/Backup_rotation_scheme#Grandfather-father-son>`_ supported
 
 You can restore backups **with** or **without** bakthat, you just have to download the backup, decrypt it with `Beefish <http://pypi.python.org/pypi/beefish>`_ command-line tool and untar it.
 
@@ -94,7 +94,6 @@ You need to set your AWS credentials:
 
     $ bakthat configure
 
-
 Usage
 =====
 
@@ -170,6 +169,40 @@ You can quickly check when was the last time you backed up a directory:
 
     $ bakthat info
 
+Delete older than
+-----------------
+
+Delete backup older than the given interval, unit supported:
+
+- **s** seconds
+- **m** minutes
+- **h** hours
+- **D** days
+- **W** weeks
+- **M** months
+- **Y** Years
+
+::
+
+    $ bakthat remove_older_than -f bakname -i 3M
+
+    $ bakthat remove_older_than -f bakname -i 3M2D8h20m5s
+
+Backup rotation
+---------------
+
+Rotate backup using Grandfather-father-son backup rotation scheme, you can save a default rotation configuration.
+
+::
+
+    $ bakthat bakthat configure_backups_rotation
+
+Now you can rotate a backup set:
+
+::
+
+    $ bakthat rotate_backups -f bakname
+
 
 Backup/Restore Glacier inventory
 --------------------------------
@@ -223,7 +256,7 @@ As a module
 
 
 S3 and Glacier IAM permissions
-==============================================
+==============================
 
 ::
 
@@ -242,6 +275,15 @@ S3 and Glacier IAM permissions
 	    ]
 	}
 
+
+Changelog
+=========
+
+0.3.8
+-----
+
+- Added **remove_older_than** command
+- Added **rotate_backups** command (Grandfather-father-son backup rotation scheme)
 
 
 Contributors
