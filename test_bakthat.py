@@ -18,6 +18,16 @@ class BakthatTestCase(unittest.TestCase):
         self.test_hash = hashlib.sha1(self.test_file.read()).hexdigest()
         self.password = "bakthat_encrypted_test"
 
+    def test_internals(self):
+        with self.assertRaises(Exception) as ar:
+            bakthat._match_filename("", "s3")
+
+        with self.assertRaises(Exception) as ar:
+            bakthat._interval_string_to_seconds("1z")
+        
+        self.assertEqual(bakthat._interval_string_to_seconds("2D1h"), 86400 * 2 + 3600)
+        self.assertEqual(bakthat._interval_string_to_seconds("3M"), 3*30*86400)
+
 
     def test_s3_backup_restore(self):
         bakthat.backup(self.test_file.name, "s3", password="")
@@ -34,6 +44,35 @@ class BakthatTestCase(unittest.TestCase):
         os.remove(self.test_filename)
 
         bakthat.delete(self.test_filename, "s3")
+
+        self.assertEqual(bakthat.match_filename(self.test_filename), [])
+
+
+    def test_s3_delete_older_than(self):
+        backup_res = bakthat.backup(self.test_file.name, "s3", password="")
+
+        self.assertEqual(bakthat.match_filename(self.test_filename, "s3")[0]["filename"],
+                        self.test_filename)
+
+        bakthat.restore(self.test_filename, "s3")
+        
+        restored_hash = hashlib.sha1(open(self.test_filename).read()).hexdigest()
+        
+        self.assertEqual(self.test_hash, restored_hash)
+
+        os.remove(self.test_filename)
+
+        test_deleted = bakthat.delete_older_than(self.test_filename, "1Y", "s3")
+
+        self.assertEqual(test_deleted, [])
+
+        time.sleep(10)
+
+        test_deleted = bakthat.delete_older_than(self.test_filename, "9s", "s3")
+
+        key_deleted = test_deleted[0]
+
+        self.assertEqual(key_deleted, backup_res["stored_filename"])
 
         self.assertEqual(bakthat.match_filename(self.test_filename), [])
 

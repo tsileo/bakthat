@@ -42,6 +42,7 @@ if not log.handlers:
 config = ConfigParser.SafeConfigParser({"default_destination": DEFAULT_DESTINATION})
 config.read(os.path.expanduser("~/.bakthat.conf"))
 
+
 class glacier_shelve(object):
     """
     Context manager for shelve
@@ -387,10 +388,14 @@ def _interval_string_to_seconds(interval_string):
             raise Exception(interval_exc)
     return seconds
 
+
 def _timedelta_total_seconds(td):
     if hasattr(timedelta, "total_seconds"):
         return getattr(td, "total_seconds")()
+
+    # Python 2.6 backward compatibility
     return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / float(10**6)
+
 
 @app.cmd(help="Delete backups older than the given interval string.")
 @app.cmd_arg('-f', '--filename', type=str, default=os.getcwd())
@@ -508,6 +513,7 @@ def info(filename, destination=None, description=None, **kwargs):
         log.info("Last backup date: {0} ({1} versions)".format(key["backup_date"].isoformat(),
                                                     str(len(keys))))
     return key
+
 
 @app.cmd(help="Set AWS S3/Glacier credentials.")
 def configure():
@@ -642,12 +648,14 @@ def show_glacier_inventory(**kwargs):
     else:
         log.error("No S3 bucket defined.")
 
+
 @app.cmd(help="Show local Glacier inventory (from shelve file)")
 def show_local_glacier_inventory(**kwargs):
     conf = kwargs.get("conf", None)
     glacier_backend = GlacierBackend(conf)
     archives = glacier_backend.load_archives()
     log.info(json.dumps(archives, sort_keys=True, indent=4, separators=(',', ': ')))
+
 
 @app.cmd(help="Backup Glacier inventory to S3")
 def backup_glacier_inventory(**kwargs):
@@ -665,6 +673,7 @@ def restore_glacier_inventory(**kwargs):
 
 def main():
     app.run()
+
 
 if __name__ == '__main__':
     main()
