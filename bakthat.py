@@ -5,7 +5,7 @@ import tempfile
 import os
 import sys
 import ConfigParser
-from datetime import datetime
+from datetime import datetime, timedelta
 from getpass import getpass
 import logging
 import shelve
@@ -338,12 +338,16 @@ def _get_store_backend(conf, destination=DEFAULT_DESTINATION):
         destination = config.get("aws", "default_destination")
     return STORAGE_BACKEND[destination](conf)
 
+
 def _match_filename(filename, destination=DEFAULT_DESTINATION, conf=None):
+    if not filename:
+        raise Exception("Filename can't be blank")
     storage_backend = _get_store_backend(conf, destination)
 
     keys = [name for name in storage_backend.ls() if name.startswith(filename)]
     keys.sort(reverse=True)
     return keys
+
 
 def match_filename(filename, destination=DEFAULT_DESTINATION, conf=None):
     _keys = _match_filename(filename, destination, conf)
@@ -359,6 +363,49 @@ def match_filename(filename, destination=DEFAULT_DESTINATION, conf=None):
         except:
             pass # If the file has been backed up with an older version of bakthat
     return keys
+
+
+def _interval_string_to_seconds(interval_string):
+    """Convert internal string like 1M, 1Y3M, 3W to seconds"""
+    interval_exc = "Bad interval format for {0}".format(interval_string)
+    interval_dict = {"s": 1, "m": 60, "h": 3600, "D": 86400,
+                       "W": 7*86400, "M": 30*86400, "Y": 365*86400}
+
+    interval_regex = re.compile("^(?P<num>[0-9]+)(?P<ext>[smhDWMY])")
+    seconds = 0
+
+    while interval_string:
+        match = interval_regex.match(interval_string)
+        if match:
+            num, ext = int(match.group("num")), match.group("ext")
+            if num > 0 and ext in interval_dict:
+                seconds += num * interval_dict[ext]
+                interval_string = interval_string[match.end():]
+            else:
+                raise Exception(interval_exc)
+        else:
+            raise Exception(interval_exc)
+    return seconds
+
+def _timedelta_total_seconds(td):
+    if hasattr(timedelta, "total_seconds"):
+        return getattr(td, "total_seconds")()
+    return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / float(10**6)
+
+@app.cmd(help="Delete backups older than the given interval string.")
+@app.cmd_arg('-f', '--filename', type=str, default=os.getcwd())
+@app.cmd_arg('-i', '--interval', type=str, help="Interval string like 1M, 1W, 1M3W4h2s")
+@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier")
+def delete_older_than(filename, interval, destination=DEFAULT_DESTINATION, conf=None):
+    storage_backend = _get_store_backend(conf, destination)
+    interval_seconds = _interval_string_to_seconds(interval)
+
+    for key in match_filename(filename, destination, conf):
+        backup_age =  _timedelta_total_seconds(datetime.utcnow() - key.get("backup_date"))
+        if backup_age > interval_seconds:
+            real_key = key.get("key")
+            log.info("Deleting {0}".format(real_key))
+            storage_backend.delete(real_key)
 
 
 @app.cmd(help="Backup a file or a directory, backup the current directory if no arg is provided.")
