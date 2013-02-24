@@ -283,6 +283,11 @@ S3 and Glacier IAM permissions
 Changelog
 =========
 
+0.3.10
+------
+
+- bug fix glacier upload
+
 0.3.9
 -----
 

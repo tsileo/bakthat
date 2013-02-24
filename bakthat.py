@@ -29,7 +29,7 @@ from beefish import decrypt, encrypt_file
 import aaargh
 import grandfatherson
 
-__version__ = "0.3.9"
+__version__ = "0.3.10"
 
 DEFAULT_LOCATION = "us-east-1"
 DEFAULT_DESTINATION = "s3"
