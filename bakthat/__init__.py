@@ -73,7 +73,16 @@ def match_filename(filename, destination=DEFAULT_DESTINATION, conf=None):
 
 
 def _interval_string_to_seconds(interval_string):
-    """Convert internal string like 1M, 1Y3M, 3W to seconds"""
+    """Convert internal string like 1M, 1Y3M, 3W to seconds.
+
+    :type interval_string: str
+    :param interval_string: Interval string like 1M, 1W, 1M3W4h2s... 
+        (s => seconds, m => minutes, h => hours, D => days, W => weeks, M => months, Y => Years).
+
+    :rtype: int
+    :return: The conversion in seconds of interval_string.
+
+    """
     interval_exc = "Bad interval format for {0}".format(interval_string)
     interval_dict = {"s": 1, "m": 60, "h": 3600, "D": 86400,
                        "W": 7*86400, "M": 30*86400, "Y": 365*86400}
@@ -96,7 +105,15 @@ def _interval_string_to_seconds(interval_string):
 
 
 def _timedelta_total_seconds(td):
-    """Python 2.6 backward compatibility function for timedelta.total_seconds."""
+    """Python 2.6 backward compatibility function for timedelta.total_seconds.
+
+    :type td: timedelta object
+    :param td: timedelta object
+
+    :rtype: float
+    :return: The total number of seconds for the given timedelta object.
+
+    """
     if hasattr(timedelta, "total_seconds"):
         return getattr(td, "total_seconds")()
 
@@ -108,7 +125,27 @@ def _timedelta_total_seconds(td):
 @app.cmd_arg('-f', '--filename', type=str, default=os.getcwd())
 @app.cmd_arg('-i', '--interval', type=str, help="Interval string like 1M, 1W, 1M3W4h2s")
 @app.cmd_arg('-d', '--destination', type=str, help="s3|glacier")
-def delete_older_than(filename, interval, destination=DEFAULT_DESTINATION, conf=None):
+def delete_older_than(filename, interval, destination=DEFAULT_DESTINATION, **kwargs):
+    """Delete backups matching the given filename older than the given interval string.
+
+    :type filename: str
+    :param filename: File/directory name.
+
+    :type interval: str
+    :param interval: Interval string like 1M, 1W, 1M3W4h2s... 
+        (s => seconds, m => minutes, h => hours, D => days, W => weeks, M => months, Y => Years).
+
+    :type destination: str
+    :param destination: glacier|s3
+
+    :type conf: dict
+    :keyword conf: Override/set AWS configuration.
+        
+    :rtype: list
+    :return: A list containing the deleted keys (S3) or archives (Glacier).
+
+    """
+    conf = kwargs.get("conf")
     storage_backend = _get_store_backend(conf, destination)
     interval_seconds = _interval_string_to_seconds(interval)
 
@@ -127,9 +164,37 @@ def delete_older_than(filename, interval, destination=DEFAULT_DESTINATION, conf=
 @app.cmd(help="Rotate backups using Grandfather-father-son backup rotation scheme.")
 @app.cmd_arg('-f', '--filename', type=str, default=os.getcwd())
 @app.cmd_arg('-d', '--destination', type=str, help="s3|glacier")
-def rotate_backups(filename, destination=DEFAULT_DESTINATION, conf=None):
+def rotate_backups(filename, destination=DEFAULT_DESTINATION, **kwargs):
+    """Rotate backup using grandfather-father-son rotation scheme.
+
+    :type filename: str
+    :param filename: File/directory name.
+
+    :type destination: str
+    :param destination: s3|glacier
+
+    :type conf: dict
+    :keyword conf: Override/set AWS configuration.
+
+    :type days: int
+    :keyword days: Number of days to keep.
+
+    :type weeks: int
+    :keyword weeks: Number of weeks to keep.
+
+    :type months: int
+    :keyword months: Number of months to keep.
+
+    :type first_week_day: str
+    :keyword first_week_day: First week day (to calculate wich weekly backup keep, saturday by default).
+        
+    :rtype: list
+    :return: A list containing the deleted keys (S3) or archives (Glacier).
+
+    """
+    conf = kwargs.get("conf", None)
     storage_backend = _get_store_backend(conf, destination)
-    rotate = RotationConfig(conf)
+    rotate = RotationConfig(kwargs)
     if not rotate:
         raise Exception("You must run bakthat configure_backups_rotation or provide rotation configuration.")
 
@@ -156,9 +221,30 @@ def rotate_backups(filename, destination=DEFAULT_DESTINATION, conf=None):
 @app.cmd(help="Backup a file or a directory, backup the current directory if no arg is provided.")
 @app.cmd_arg('-f', '--filename', type=str, default=os.getcwd())
 @app.cmd_arg('-d', '--destination', type=str, help="s3|glacier")
-@app.cmd_arg('-s', '--description', type=str, default=None)
 @app.cmd_arg('-p', '--prompt', type=str, help="yes|no", default="yes")
-def backup(filename, destination=None, description=None, prompt="yes", **kwargs):
+def backup(filename, destination=None, prompt="yes", **kwargs):
+    """Perform backup.
+
+    :type filename: str
+    :param filename: File/directory to backup.
+            
+    :type destination: str
+    :param destination: s3|glacier
+
+    :type prompt: str
+    :param prompt: Disable password promp, disable encryption,
+        only useful when using bakthat in command line mode.
+
+    :type password: str
+    :keyword password: Password, empty string to disable encryption.
+
+    :type conf: dict
+    :keyword conf: Override/set AWS configuration.
+
+    :rtype: dict
+    :return: A dict containing the following keys: stored_filename, size, metadata and filename.
+
+    """
     conf = kwargs.get("conf", None)
     storage_backend = _get_store_backend(conf, destination)
     backup_file_fmt = "{0}.{1}.tgz"
@@ -169,7 +255,7 @@ def backup(filename, destination=None, description=None, prompt="yes", **kwargs)
     date_component = now.strftime("%Y%m%d%H%M%S")
     stored_filename = backup_file_fmt.format(arcname, date_component)
     
-    backup_data = dict(filename=arcname, backup_date=now)
+    backup_data = dict(filename=arcname, backup_date=int(now.strftime("%s")))
 
     password = kwargs.get("password")
     if password is None and prompt.lower() != "no":
@@ -313,6 +399,21 @@ def configure_backups_rotation():
 @app.cmd_arg('-f', '--filename', type=str, default="")
 @app.cmd_arg('-d', '--destination', type=str, help="s3|glacier")
 def restore(filename, destination=None, **kwargs):
+    """Restore backup in the current working directory.
+
+    :type filename: str
+    :param filename: File/directory to backup.
+            
+    :type destination: str
+    :param destination: s3|glacier
+
+    :type conf: dict
+    :keyword conf: Override/set AWS configuration.
+
+    :rtype: bool
+    :return: True if successful.
+
+    """
     conf = kwargs.get("conf", None)
     storage_backend = _get_store_backend(conf, destination)
 
@@ -368,6 +469,24 @@ def restore(filename, destination=None, **kwargs):
 @app.cmd_arg('-f', '--filename', type=str, default="")
 @app.cmd_arg('-d', '--destination', type=str, help="s3|glacier")
 def delete(filename, destination=None, **kwargs):
+    """Delete a backup.
+
+    :type filename: str
+    :param filename: File/directory to backup.
+
+    :type destination: str
+    :param destination: glacier|s3
+
+    :type conf: dict
+    :keyword conf: A dict with a custom configuration.
+
+    :type conf: dict
+    :keyword conf: Override/set AWS configuration.
+
+    :rtype: bool
+    :return: True if the file is deleted.
+
+    """
     conf = kwargs.get("conf", None)
     storage_backend = _get_store_backend(conf, destination)
 
@@ -414,6 +533,7 @@ def show_glacier_inventory(**kwargs):
         log.info(json.dumps(loaded_archives, sort_keys=True, indent=4, separators=(',', ': ')))
     else:
         log.error("No S3 bucket defined.")
+    return loaded_archives
 
 
 @app.cmd(help="Show local Glacier inventory (from shelve file)")
@@ -422,10 +542,17 @@ def show_local_glacier_inventory(**kwargs):
     glacier_backend = GlacierBackend(conf)
     archives = glacier_backend.load_archives()
     log.info(json.dumps(archives, sort_keys=True, indent=4, separators=(',', ': ')))
+    return archives
 
 
 @app.cmd(help="Backup Glacier inventory to S3")
 def backup_glacier_inventory(**kwargs):
+    """Backup Glacier inventory to S3.
+
+    :type conf: dict
+    :keyword conf: Override/set AWS configuration.
+
+    """
     conf = kwargs.get("conf", None)
     glacier_backend = GlacierBackend(conf)
     glacier_backend.backup_inventory()
@@ -433,6 +560,12 @@ def backup_glacier_inventory(**kwargs):
 
 @app.cmd(help="Restore Glacier inventory from S3")
 def restore_glacier_inventory(**kwargs):
+    """Restore custom Glacier inventory from S3.
+
+    :type conf: dict
+    :keyword conf: Override/set AWS configuration.
+
+    """
     conf = kwargs.get("conf", None)
     glacier_backend = GlacierBackend(conf)
     glacier_backend.restore_inventory()

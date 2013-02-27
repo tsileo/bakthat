@@ -34,7 +34,7 @@ class BakthatBackend:
     def __init__(self, conf=None, extra_conf=[], section="aws"):
         self.custom_conf = None
         self.conf = {}
-        if conf is None:
+        if not conf:
             try:
                 if section == "aws":
                     self.conf["access_key"] = config.get(section, "access_key")
