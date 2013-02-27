@@ -7,7 +7,9 @@ import time
 import unittest
 import logging
 
-config = bakthat.config
+from bakthat.conf import config, DEFAULT_DESTINATION, DEFAULT_LOCATION
+from bakthat.backends import GlacierBackend
+
 log = logging.getLogger(__name__)
 
 class BakthatTestCase(unittest.TestCase):
@@ -116,7 +118,7 @@ class BakthatTestCase(unittest.TestCase):
 
             # We initialize glacier backend 
             # to check that the file appear in both local and remote (S3) inventory
-            glacier_backend = bakthat.GlacierBackend(None)
+            glacier_backend = GlacierBackend(None)
             
             archives = glacier_backend.load_archives()
             archives_s3 = glacier_backend.load_archives_from_s3()

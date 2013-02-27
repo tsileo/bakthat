@@ -1,6 +1,6 @@
 import os
 import sys
-from setuptools import setup
+from setuptools import setup, find_packages
 
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
@@ -14,7 +14,7 @@ setup(
     license = "MIT",
     keywords = "aws s3 glacier backup restore archive",
     url = "https://github.com/tsileo/bakthat",
-    py_modules=['bakthat'],
+    packages=find_packages(exclude=['ez_setup', 'tests', 'tests.*']),
     long_description= read('README.rst'),
     install_requires=[
         "aaargh", "boto", "pycrypto", "beefish", "grandfatherson"
@@ -27,6 +27,5 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python",
     ],
-    scripts=["bakthat.py"],
     zip_safe=False,
 )
