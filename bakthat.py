@@ -46,9 +46,7 @@ config.read(os.path.expanduser("~/.bakthat.conf"))
 
 
 class glacier_shelve(object):
-    """
-    Context manager for shelve
-    """
+    """Context manager for shelve."""
 
     def __enter__(self):
         self.shelve = shelve.open(os.path.expanduser("~/.bakthat.db"))
@@ -96,15 +94,14 @@ class BakthatBackend:
                 self.conf[key] = conf.get(key)
 
 class RotationConfig(BakthatBackend):
+    """Hold backups rotation configuration."""
     def __init__(self, conf=None):
         BakthatBackend.__init__(self, conf, 
                                 extra_conf=["days", "weeks", "months", "first_week_day"],
                                 section="rotation")
 
 class S3Backend(BakthatBackend):
-    """
-    Backend to handle S3 upload/download
-    """
+    """Backend to handle S3 upload/download."""
     def __init__(self, conf=None):
         BakthatBackend.__init__(self, conf, extra_conf=["s3_bucket"])
 
@@ -135,6 +132,7 @@ class S3Backend(BakthatBackend):
         return encrypted_out
 
     def cb(self, complete, total):
+        """Upload callback to log upload percentage."""
         percent = int(complete * 100.0 / total)
         log.info("Upload completion: {0}%".format(percent))
 
@@ -157,9 +155,7 @@ class S3Backend(BakthatBackend):
 
 
 class GlacierBackend(BakthatBackend):
-    """
-    Backend to handle Glacier upload/download
-    """
+    """Backend to handle Glacier upload/download."""
     def __init__(self, conf=None):
         BakthatBackend.__init__(self, conf, extra_conf=["glacier_vault", "s3_bucket"])
 
@@ -173,9 +169,7 @@ class GlacierBackend(BakthatBackend):
 
 
     def backup_inventory(self):
-        """
-        Backup the local inventory from shelve as a json string to S3
-        """
+        """Backup the local inventory from shelve as a json string to S3."""
         if config.get("aws", "s3_bucket"):
             archives = self.load_archives()
 
@@ -207,9 +201,7 @@ class GlacierBackend(BakthatBackend):
             return {}
 
     def restore_inventory(self):
-        """
-        Restore inventory from S3 to local shelve
-        """
+        """Restore inventory from S3 to local shelve."""
         if config.get("aws", "s3_bucket"):
             loaded_archives = self.load_archives_from_s3()
 
@@ -238,9 +230,7 @@ class GlacierBackend(BakthatBackend):
         self.backup_inventory()
 
     def get_archive_id(self, filename):
-        """
-        Get the archive_id corresponding to the filename
-        """
+        """Get the archive_id corresponding to the filename."""
         with glacier_shelve() as d:
             if not d.has_key("archives"):
                 d["archives"] = dict()
@@ -253,9 +243,7 @@ class GlacierBackend(BakthatBackend):
         return None
 
     def download(self, keyname, job_check=False):
-        """
-        Initiate a Job, check its status, and download the archive if it's completed.
-        """
+        """Initiate a Job, check its status, and download the archive if it's completed."""
         archive_id = self.get_archive_id(keyname)
         if not archive_id:
             return
@@ -305,18 +293,14 @@ class GlacierBackend(BakthatBackend):
             return
 
     def retrieve_inventory(self, jobid):
-        """
-        Initiate a job to retrieve Galcier inventory or output inventory
-        """
+        """Initiate a job to retrieve Galcier inventory or output inventory."""
         if jobid is None:
             return self.vault.retrieve_inventory(sns_topic=None, description="Bakthat inventory job")
         else:
             return self.vault.get_job(jobid)
 
     def retrieve_archive(self, archive_id, jobid):
-        """
-        Initiate a job to retrieve Galcier archive or download archive
-        """
+        """Initiate a job to retrieve Galcier archive or download archive."""
         if jobid is None:
             return self.vault.retrieve_archive(archive_id, sns_topic=None, description='Retrieval job')
         else:
@@ -353,6 +337,7 @@ def _get_store_backend(conf, destination=DEFAULT_DESTINATION):
 
 
 def _match_filename(filename, destination=DEFAULT_DESTINATION, conf=None):
+    """Return all stored backups keys for a given filename."""
     if not filename:
         raise Exception("Filename can't be blank")
     storage_backend = _get_store_backend(conf, destination)
@@ -363,6 +348,7 @@ def _match_filename(filename, destination=DEFAULT_DESTINATION, conf=None):
 
 
 def match_filename(filename, destination=DEFAULT_DESTINATION, conf=None):
+    """Return a list of dict with backup_name, date_component, and is_enc."""
     _keys = _match_filename(filename, destination, conf)
     regex_key = re.compile(r"(?P<backup_name>.+)\.(?P<date_component>\d{14})\.tgz(?P<is_enc>\.enc)?")
 
@@ -372,7 +358,7 @@ def match_filename(filename, destination=DEFAULT_DESTINATION, conf=None):
     keys = []
     for key in _keys:
         match = regex_key.match(key)
-        
+
         # Backward compatibility
         if not match:
             match = old_regex_key.match(key)
@@ -409,6 +395,7 @@ def _interval_string_to_seconds(interval_string):
 
 
 def _timedelta_total_seconds(td):
+    """Python 2.6 backward compatibility function for timedelta.total_seconds."""
     if hasattr(timedelta, "total_seconds"):
         return getattr(td, "total_seconds")()
 
@@ -575,6 +562,7 @@ def configure():
     config.set("aws", "access_key", raw_input("AWS Access Key: "))
     config.set("aws", "secret_key", raw_input("AWS Secret Key: "))
     config.set("aws", "s3_bucket", raw_input("S3 Bucket Name: "))
+    config.set("aws", "glacier_vault", raw_input("Glacier Vault Name: "))
     while 1:
         default_destination = raw_input("Default destination ({0}): ".format(DEFAULT_DESTINATION))
         if default_destination:
@@ -588,7 +576,6 @@ def configure():
             break
 
     config.set("aws", "default_destination", default_destination)
-    config.set("aws", "glacier_vault", raw_input("Glacier Vault Name: "))
     region_name = raw_input("Region Name ({0}): ".format(DEFAULT_LOCATION))
     if not region_name:
         region_name = DEFAULT_LOCATION
@@ -596,6 +583,7 @@ def configure():
     config.write(open(os.path.expanduser("~/.bakthat.conf"), "w"))
 
     log.info("Config written in %s" % os.path.expanduser("~/.bakthat.conf"))
+    log.info("Run bakthat configure_backups_rotation if needed.")
 
 @app.cmd(help="Configure backups rotation")
 def configure_backups_rotation():
