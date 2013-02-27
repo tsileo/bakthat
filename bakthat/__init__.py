@@ -18,7 +18,8 @@ import aaargh
 import grandfatherson
 
 from bakthat.backends import GlacierBackend, S3Backend, RotationConfig
-from bakthat.conf import config, DEFAULT_DESTINATION, DEFAULT_LOCATION
+from bakthat.conf import config, dump_truck, DEFAULT_DESTINATION, DEFAULT_LOCATION
+from bakthat.utils import dump_truck_delete_backup
 
 __version__ = "0.3.10"
 
@@ -157,6 +158,7 @@ def delete_older_than(filename, interval, destination=DEFAULT_DESTINATION, **kwa
             real_key = key.get("key")
             log.info("Deleting {0}".format(real_key))
             storage_backend.delete(real_key)
+            dump_truck_delete_backup(real_key)
             deleted.append(real_key)
 
     return deleted
@@ -214,6 +216,7 @@ def rotate_backups(filename, destination=DEFAULT_DESTINATION, **kwargs):
             real_key = key.get("key")
             log.info("Deleting {0}".format(real_key))
             storage_backend.delete(real_key)
+            dump_truck_delete_backup(real_key)
             deleted.append(real_key)
 
     return deleted
@@ -242,7 +245,7 @@ def backup(filename, destination=None, prompt="yes", **kwargs):
     :keyword conf: Override/set AWS configuration.
 
     :rtype: dict
-    :return: A dict containing the following keys: stored_filename, size, metadata and filename.
+    :return: A dict containing the following keys: stored_filename, size, metadata, backend and filename.
 
     """
     conf = kwargs.get("conf", None)
@@ -255,7 +258,10 @@ def backup(filename, destination=None, prompt="yes", **kwargs):
     date_component = now.strftime("%Y%m%d%H%M%S")
     stored_filename = backup_file_fmt.format(arcname, date_component)
     
-    backup_data = dict(filename=arcname, backup_date=int(now.strftime("%s")))
+    backup_data = dict(filename=arcname, 
+                    backup_date=int(now.strftime("%s")),
+                    backend=destination,
+                    is_deleted=False)
 
     password = kwargs.get("password")
     if password is None and prompt.lower() != "no":
@@ -319,6 +325,10 @@ def backup(filename, destination=None, prompt="yes", **kwargs):
         os.remove(outname)
 
     log.debug(backup_data)
+
+    # Insert backup metadata in SQLite
+    dump_truck.insert(backup_data, "backups")
+    
     return backup_data
 
 
@@ -505,6 +515,8 @@ def delete(filename, destination=None, **kwargs):
     log.info("Deleting " + key_name)
 
     storage_backend.delete(key_name)
+
+    dump_truck_delete_backup(key_name)
 
     return True
 

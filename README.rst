@@ -82,6 +82,8 @@ Requirements
 * `Beefish <http://pypi.python.org/pypi/beefish>`_
 * `Boto <http://pypi.python.org/pypi/boto>`_
 * `Grandfatherson <https://pypi.python.org/pypi/GrandFatherSon>`_
+* `DumpTruck <http://www.dumptruck.io/>`_
+
 
 Installation
 ============
