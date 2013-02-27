@@ -364,17 +364,24 @@ def _match_filename(filename, destination=DEFAULT_DESTINATION, conf=None):
 
 def match_filename(filename, destination=DEFAULT_DESTINATION, conf=None):
     _keys = _match_filename(filename, destination, conf)
-    regex_key = re.compile(r"(.+)(\d{14})\.tgz(\.enc)?")
+    regex_key = re.compile(r"(?P<backup_name>.+)\.(?P<date_component>\d{14})\.tgz(?P<is_enc>\.enc)?")
+
+    # old regex for backward compatibility (for files without dot before the date component).
+    old_regex_key = re.compile(r"(?P<backup_name>.+)(?P<date_component>\d{14})\.tgz(?P<is_enc>\.enc)?")
+    
     keys = []
     for key in _keys:
-        try:
-            filename, datestr, isenc = re.findall(regex_key, key)[0]
-            keys.append(dict(filename=filename,
+        match = regex_key.match(key)
+        
+        # Backward compatibility
+        if not match:
+            match = old_regex_key.match(key)
+        
+        if match:
+            keys.append(dict(filename=match.group("backup_name"),
                         key=key,
-                        backup_date=datetime.strptime(datestr, "%Y%m%d%H%M%S"),
-                        is_enc=bool(isenc)))
-        except:
-            pass # If the file has been backed up with an older version of bakthat
+                        backup_date=datetime.strptime(match.group("date_component"), "%Y%m%d%H%M%S"),
+                        is_enc=bool(match.group("is_enc"))))
     return keys
 
 
@@ -466,12 +473,13 @@ def rotate_backups(filename, destination=DEFAULT_DESTINATION, conf=None):
 def backup(filename, destination=None, description=None, prompt="yes", **kwargs):
     conf = kwargs.get("conf", None)
     storage_backend = _get_store_backend(conf, destination)
+    backup_file_fmt = "{0}.{1}.tgz"
 
     log.info("Backing up " + filename)
     arcname = filename.strip('/').split('/')[-1]
     now = datetime.utcnow()
     date_component = now.strftime("%Y%m%d%H%M%S")
-    stored_filename = arcname +  date_component + ".tgz"
+    stored_filename = backup_file_fmt.format(arcname, date_component)
     
     backup_data = dict(filename=arcname, backup_date=now)
 
@@ -484,18 +492,21 @@ def backup(filename, destination=None, description=None, prompt="yes", **kwargs)
                 log.error("Password confirmation doesn't match")
                 return
 
+
+    # Check if the file is not already compressed
     if mimetypes.guess_type(arcname) == ('application/x-tar', 'gzip'):
         log.info("File already compressed")
         outname = filename
 
         new_arcname = re.sub(r'(\.t(ar\.)?gz)', '', arcname)
-        stored_filename = new_arcname + date_component + ".tgz"
+        stored_filename = backup_file_fmt.format(new_arcname, date_component)
         
         with open(outname) as outfile:
             backup_data["size"] = os.fstat(outfile.fileno()).st_size
 
         bakthat_compression = False
     else:
+        # If not we compress it
         log.info("Compressing...")
         with tempfile.NamedTemporaryFile(delete=False) as out:
             with closing(tarfile.open(fileobj=out, mode="w:gz")) as tar:
