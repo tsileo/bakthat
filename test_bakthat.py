@@ -129,8 +129,8 @@ class BakthatTestCase(unittest.TestCase):
             # Next we check that the file is stored in both inventories
             inventory_key_name = bakthat.match_filename(self.test_filename, "glacier")[0]["key"]
 
-            self.assertTrue(inventory_key_name in archives)
-            self.assertTrue(inventory_key_name in archives_s3)
+            self.assertTrue(inventory_key_name in [a.get("filename") for a in archives])
+            self.assertTrue(inventory_key_name in [a.get("filename") for a in archives_s3])
 
             # Restore backup
             job = bakthat.restore(self.test_filename, "glacier", job_check=True)

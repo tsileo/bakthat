@@ -2,6 +2,7 @@
 import logging
 import bakthat
 from bakthat.conf import config, DEFAULT_DESTINATION, DEFAULT_LOCATION
+
 try:
     import requests
 except ImportError, ie:

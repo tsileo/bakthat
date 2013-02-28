@@ -582,6 +582,10 @@ def restore_glacier_inventory(**kwargs):
     glacier_backend = GlacierBackend(conf)
     glacier_backend.restore_inventory()
 
+@app.cmd()
+def upgrade_to_dump_truck():
+    glacier_backend = GlacierBackend()
+    glacier_backend.upgrade_to_dump_truck()
 
 def main():
     app.run()

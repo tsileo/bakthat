@@ -9,7 +9,7 @@ Here are some features:
 * Compress with `tarfile <http://docs.python.org/library/tarfile.html>`_
 * Encrypt with `beefish <http://pypi.python.org/pypi/beefish>`_ (**optional**)
 * Upload/download to S3 or Glacier with `boto <http://pypi.python.org/pypi/boto>`_
-* Local Glacier inventory stored with `shelve <http://docs.python.org/library/shelve.html>`_
+* Local Glacier inventory stored with `DumpTruck <http://www.dumptruck.io/>`_
 * Automatically handle/backup/restore a custom Glacier inventory to S3
 * Delete older than, and `Grandfather-father-son backup rotation <http://en.wikipedia.org/wiki/Backup_rotation_scheme#Grandfather-father-son>`_ supported
 
@@ -284,6 +284,24 @@ S3 and Glacier IAM permissions
 
 Changelog
 =========
+
+0.4.0
+-----
+
+If you come fro bakthat 0.3.x, you need to run:
+
+::
+
+    $ bakthat upgrade_to_dump_truck
+
+
+Changes:
+
+- Using `DumpTruck <http://www.dumptruck.io/>`_ instead of `shelve <http://docs.python.org/library/shelve.html>`_
+- Save backups metadata for both backends
+- BakHelper to help build backup scripts
+- BakSyncer to help keep you list sync over a custom REST API
+- Now adding a dot between the original filename and the date component
 
 0.3.10
 ------
