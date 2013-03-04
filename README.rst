@@ -26,6 +26,8 @@ Changelog
 0.4.0
 ~~~~~
 
+__Not on pypi yet, I'm making final tests before releasing.__
+
 If you come from bakthat 0.3.x, you need to run:
 
 ::
