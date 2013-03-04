@@ -34,23 +34,24 @@ class glacier_shelve(object):
 
 class BakthatBackend:
     """Handle Configuration for Backends."""
-    def __init__(self, conf=None, profile="default"):
+    def __init__(self, conf=None, profile="default", **kwargs):
         self.conf = conf
         if not conf:
             self.conf = config.get(profile)
             if not self.conf:
-                raise Exception("No {0} profile defined in {1}.".format(profile, CONFIG_FILE))
+                log.error("No {0} profile defined in {1}.".format(profile, CONFIG_FILE))
             if not "access_key" in self.conf or not "secret_key" in self.conf:
-                raise Exception("Missing access_key/secret_key in {0} profile ({1}).".format(profile, CONFIG_FILE))
+                log.error("Missing access_key/secret_key in {0} profile ({1}).".format(profile, CONFIG_FILE))
 
 class RotationConfig(BakthatBackend):
     """Hold backups rotation configuration."""
-    def __init__(self, conf=None):
-        BakthatBackend.__init__(self, conf, profile="rotation")
+    def __init__(self, conf=None, profile="default"):
+        BakthatBackend.__init__(self, conf, profile)
+        self.conf = self.conf.get("rotation")
 
 class S3Backend(BakthatBackend):
     """Backend to handle S3 upload/download."""
-    def __init__(self, conf=None):
+    def __init__(self, conf=None, profile="default"):
         BakthatBackend.__init__(self, conf)
 
         con = boto.connect_s3(self.conf["access_key"], self.conf["secret_key"])
@@ -105,7 +106,7 @@ class S3Backend(BakthatBackend):
 class GlacierBackend(BakthatBackend):
     """Backend to handle Glacier upload/download."""
     def __init__(self, conf=None):
-        BakthatBackend.__init__(self, conf)
+        BakthatBackend.__init__(self, conf, profile="default")
 
         con = boto.connect_glacier(aws_access_key_id=self.conf["access_key"],
                                     aws_secret_access_key=self.conf["secret_key"],

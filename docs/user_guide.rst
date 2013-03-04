@@ -30,6 +30,7 @@ Here is what a configuration object looks like:
 
 The **region_name** key is optionnal is you want to use **us-east-1**.
 
+
 Managing profiles
 ~~~~~~~~~~~~~~~~~
 
