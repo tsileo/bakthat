@@ -33,7 +33,8 @@ if not "backups" in dump_truck.tables():
                     'backend': 's3',
                     'is_deleted': False,
                     'last_updated': 1361994976,
-                    'tags': []}, "backups")
+                    'tags': [],
+                    'backend_hash': 'backendhash'}, "backups")
     dump_truck.create_index(["stored_filename"], "backups", unique=True)
 
 if not "inventory" in dump_truck.tables():

@@ -68,7 +68,8 @@ class S3Backend(BakthatBackend):
             else:
                 raise e
 
-        self.container = "S3 Bucket: {0}".format(self.conf["s3_bucket"])
+        self.container = self.conf["s3_bucket"]
+        self.container_key = "s3_bucket"
 
     def download(self, keyname):
         k = Key(self.bucket)
@@ -114,7 +115,8 @@ class GlacierBackend(BakthatBackend):
 
         self.vault = con.create_vault(self.conf["glacier_vault"])
         self.backup_key = "bakthat_glacier_inventory"
-        self.container = "Glacier vault: {0}".format(self.conf["glacier_vault"])
+        self.container = self.conf["glacier_vault"]
+        self.container_key = "glacier_vault"
 
     def load_archives(self):
         return dump_truck.dump("inventory")
@@ -158,10 +160,10 @@ class GlacierBackend(BakthatBackend):
             loaded_archives = self.load_archives_from_s3()
 
             with glacier_shelve() as d:
-                if not d.has_key("archives"):
-                    d["archives"] = dict()
-
-                archives = loaded_archives
+                archives = {}
+                for a in loaded_archives:
+                    print a
+                    archives[a["filename"]] = a["archive_id"]
                 d["archives"] = archives
         else:
             raise Exception("You must set s3_bucket in order to backup/restore inventory to/from S3.")
@@ -281,9 +283,10 @@ class GlacierBackend(BakthatBackend):
             with glacier_shelve() as d:
                 archives = d["archives"]
                 if "archives" in d:
+                    print archives
                     for key, archive_id in archives.items():
-                        print {"filename": key, "archive_id": archive_id}
-                        dump_truck.insert({"filename": key, "archive_id": archive_id}, "inventory")
+                        #print {"filename": key, "archive_id": archive_id}
+                        dump_truck.upsert({"filename": key, "archive_id": archive_id}, "inventory")
                         del archives[key]
                 d["archives"] = archives
         except Exception, exc:

@@ -11,10 +11,19 @@ As a module
 .. code-block:: python
 
     import bakthat
-    aws_conf = {"access_key":"", "secret_key":"", "s3_bucket": "", "glacier_vault": ""}
+
+    # roration is optional
+    bakthat_conf = {'access_key': 'YOURACCESSKEY',
+                    'secret_key': 'YOURSECRETKEY',
+                    'glacier_vault': 'yourvault',
+                    's3_bucket': 'yours3bucket',
+                    'region_name': 'eu-west-1',
+                    'rotation': {'days': 7,
+                                'first_week_day': 5,
+                                'months': 6,
+                                'weeks': 6}}
 
     bakthat.backup("/dir/i/wanto/bak", conf=aws_conf)
-    # return {'stored_filename': 'bak20130222171513.tgz', 'size': 154, 'metadata': {'is_enc': False}, 'filename': 'bak'}
 
     bakthat.backup("/dir/i/wanto/bak", conf=aws_conf, destination="glacier")
 

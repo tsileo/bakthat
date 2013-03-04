@@ -2,6 +2,7 @@
 import logging
 from datetime import datetime, timedelta
 import bakthat
+import hashlib
 from bakthat.conf import config, dump_truck, DEFAULT_DESTINATION, DEFAULT_LOCATION
 import re
 
@@ -100,6 +101,20 @@ def _get_is_deleted_query(is_deleted):
         return " is_deleted == 1"
     return " is_deleted == 0"
 
+def _get_profile_query(profile):
+    if profile:
+        profile_conf = config.get(profile)
+        if profile_conf:
+            s3_hash_key = hashlib.sha512(profile_conf.get("access_key") + \
+                                profile_conf.get("s3_bucket")).hexdigest()
+            glacier_hash_key = s3_hash_key = hashlib.sha512(profile_conf.get("access_key") + \
+                                profile_conf.get("glacier_vault")).hexdigest()
+            return " ((backend == 's3' AND backend_hash == '{0}') AND \
+                    (backend == 'glacier' AND backend_hash == '{1}'))".format(s3_hash_key,
+                                                                        glacier_hash_key)
+        else:
+            raise Exception("Profile {0} not found.".format(profile))
+    return ""
 
 def _get_query(**kwargs):
     """Return the final part of a SQLite query.
@@ -123,23 +138,33 @@ def _get_query(**kwargs):
     :type is_deleted: bool
     :keyword is_deleted: is_deleted status, 0 by default
 
+    :type profile: str
+    :keyword profile: Profile name, empty string to show all profiles.
+
     :rtype: str
     :return: A str to append after a WHERE
         when making SQLite query.
 
     """
     tags = kwargs.get("tags", [])
+    if isinstance(tags, (unicode, str)):
+        tags = tags.split()
     destination = kwargs.get("destination", "")
     query = kwargs.get("query", "")
     stored_filename = kwargs.get("stored_filename", "")
     is_deleted = kwargs.get("is_deleted", 0)
+    profile = kwargs.get("profile", "")
     querys = [_get_tags_query(tags),
             _get_destination_query(destination),
             _get_search_query(query),
             _get_stored_filename_query(stored_filename),
-            _get_is_deleted_query(is_deleted)]
+            _get_is_deleted_query(is_deleted),
+            _get_profile_query(profile)]
     querys = filter(None, querys)
-    return " AND".join(querys)
+    query = " AND".join(querys)
+    log.debug("_get_query: {0}".format(query))
+    print query
+    return query
 
 def _timedelta_total_seconds(td):
     """Python 2.6 backward compatibility function for timedelta.total_seconds.

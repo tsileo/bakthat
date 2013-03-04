@@ -7,6 +7,7 @@ import ConfigParser
 from datetime import datetime, timedelta
 from getpass import getpass
 import logging
+import hashlib
 import json
 import re
 import mimetypes
@@ -34,6 +35,9 @@ __version__ = "0.4.0"
 app = aaargh.App(description="Compress, encrypt and upload files directly to Amazon S3/Glacier.")
 
 log = logging.getLogger()
+
+if not log.handlers:
+    logging.basicConfig(level=logging.INFO, format='%(message)s')
 
 STORAGE_BACKEND = dict(s3=S3Backend, glacier=GlacierBackend)
 
@@ -294,6 +298,8 @@ def backup(filename, destination=None, prompt="yes", tags=[], profile="default",
 
     backup_data["metadata"] = dict(is_enc=bakthat_encryption)
     backup_data["stored_filename"] = stored_filename
+    backup_data["backend_hash"] = hashlib.sha512(storage_backend.conf.get("access_key") + \
+                                    storage_backend.conf.get(storage_backend.container_key)).hexdigest()
 
     log.info("Uploading...")
     storage_backend.upload(stored_filename, outname)
@@ -333,9 +339,9 @@ def info(filename, destination=None, profile="default", **kwargs):
 @app.cmd_arg('-q', '--query', type=str, default="", help="search filename for query")
 @app.cmd_arg('-d', '--destination', type=str, default="", help="glacier|s3, default both")
 @app.cmd_arg('-t', '--tags', type=str, default="", help="tags space separated")
-@app.cmd_arg('-p', '--profile', type=str, default="default", help="profile name (default by default)")
-def show(query="", destination=DEFAULT_DESTINATION, tags=[], profile="default"):
-    query = _get_query(tags=tags, destination=destination, query=query)
+@app.cmd_arg('-p', '--profile', type=str, default="", help="profile name (all profiles are displayed by default)")
+def show(query="", destination=DEFAULT_DESTINATION, tags=[], profile="", help="Profile, blank to show all"):
+    query = _get_query(tags=tags, destination=destination, query=query, profile=profile)
     if query:
         query = "WHERE " + query
     backups = dump_truck.execute("SELECT * FROM backups {0}".format(query))
@@ -626,7 +632,12 @@ def upgrade_to_dump_truck():
                 filename = key
                 is_enc = False
                 backup_date = 0
-
+            if backend == "s3":
+                backend_hash = hashlib.sha512(s3_backend.conf.get("access_key") + \
+                                    s3_backend.conf.get(s3_backend.container_key)).hexdigest()
+            elif backend == "glacier":
+                backend_hash = hashlib.sha512(glacier_backend.conf.get("access_key") + \
+                                    glacier_backend.conf.get(glacier_backend.container_key)).hexdigest()
             new_backup = dict(backend=backend,
                             is_deleted=0,
                             backup_date=backup_date,
@@ -635,7 +646,8 @@ def upgrade_to_dump_truck():
                             filename=filename,
                             last_updated=int(datetime.utcnow().strftime("%s")),
                             metadata=dict(is_enc=is_enc),
-                            size=0)
+                            size=0,
+                            backend_hash=backend_hash)
             try:
                 dump_truck_insert_backup(new_backup)
             except:
@@ -647,5 +659,4 @@ def main():
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO, format='%(message)s')
     main()

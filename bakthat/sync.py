@@ -23,8 +23,8 @@ class BakSyncer(BakthatBackend):
     No sensitive information is transmitted except (you should be using https):
     - API user/password
     - a hash (hashlib.sha512) of your access_key concatened with 
-        your s3_bucket and glacier_vault, to be able to sync multiple
-        client with the same configuration.
+        your s3_bucket or glacier_vault, to be able to sync multiple
+        client with the same configuration stored as metadata for each bakckup.
 
     :type api_url: str
     :param api_url: Base API URL
@@ -36,10 +36,6 @@ class BakSyncer(BakthatBackend):
         conf = kwargs.get("conf")
         BakthatBackend.__init__(self, conf, extra_conf=["glacier_vault", "s3_bucket"])
 
-        # We generate the hash of the access key, to be able to sync multiple host with the same AWS config
-        aws_config_hash = self.conf["access_key"] + self.conf["glacier_vault"] + self.conf["s3_bucket"]
-        hashws = hashlib.sha512(aws_config_hash).hexdigest()
-
         self.api_url = api_url
         self.auth = auth
         self.request_kwargs = {}
@@ -47,7 +43,6 @@ class BakSyncer(BakthatBackend):
             self.request_kwargs["auth"] = self.auth
 
         self.request_kwargs["headers"] = {'content-type': 'application/json',
-                                        'bakthat-key': hashws,
                                         'bakthat-client': socket.gethostname()}
 
 
