@@ -1,15 +1,24 @@
 # -*- encoding: utf-8 -*-
-import ConfigParser
+import yaml
 import os
 from dumptruck import DumpTruck
 import math
+import logging
+
+log = logging.getLogger(__name__)
+
+CONFIG_FILE = os.path.expanduser("~/.bakthat.yml")
 
 DEFAULT_LOCATION = "us-east-1"
 DEFAULT_DESTINATION = "s3"
 
 # Read default config file
-config = ConfigParser.SafeConfigParser()
-config.read(os.path.expanduser("~/.bakthat.conf"))
+config = {}
+if os.path.isfile(CONFIG_FILE):
+    log.debug("Try loading default config file: {0}".format(CONFIG_FILE))
+    config = yaml.load(open(CONFIG_FILE))
+    if config:
+        log.debug("Config loaded")
 
 # DumpTruck initialization
 dump_truck = DumpTruck(dbname=os.path.expanduser("~/.bakthat.dt"), vars_table="config")

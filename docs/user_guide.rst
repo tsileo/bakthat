@@ -5,6 +5,52 @@ User Guide
 
 Everything you need to know as a user.
 
+Configuration
+-------------
+
+Bakthat stores configuration in `YAML <http://yaml.org/>`_ format, to have the same configuration handling for both command line and Pytohn module use.
+
+You can also handle **multiples profiles** if you need to manage multiple AWs account or vaults/buckets.
+
+By default, your configuration is stored in **~/.bakthat.yml**.
+
+To get started, you can run **bakthat configure**.
+
+::
+
+    $ bakthat configure
+
+Here is what a configuration object looks like:
+
+    access_key: YOUR_ACCESS_KEY
+    secret_key: YOUR_SECRET_KEY
+    region_name: us-east-1
+    glacier_vault: myvault
+    s3_bucket: mybucket
+
+The **region_name** key is optionnal is you want to use **us-east-1**.
+
+Managing profiles
+~~~~~~~~~~~~~~~~~
+
+Here is how profiles are stored, you can either create them manually or with command line.
+
+.. code-block:: yaml
+
+    default:
+      access_key: YOUR_ACCESS_KEY
+      secret_key: YOUR_SECRET_KEY
+      region_name: us-east-1
+      glacier_vault: myvault
+      s3_bucket: mybucket
+    myprofile:
+      access_key: YOUR_ACCESS_KEY
+      secret_key: YOUR_SECRET_KEY
+      region_name: us-east-1
+      glacier_vault: myvault
+      s3_bucket: mybucket
+
+
 Getting Started
 ---------------
 

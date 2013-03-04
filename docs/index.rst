@@ -33,6 +33,7 @@ Requirements
 * `GrandFatherSon <https://pypi.python.org/pypi/GrandFatherSon>`_
 * `DumpTruck <http://www.dumptruck.io/>`_
 * `byteformat <https://pypi.python.org/pypi/byteformat>`_
+* `pyyaml <http://pyyaml.org>`_
 
 Installation
 ------------

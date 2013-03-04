@@ -13,6 +13,7 @@ import mimetypes
 import calendar
 from contextlib import closing # for Python2.6 compatibility
 
+import yaml
 import boto
 from beefish import decrypt, encrypt_file
 import aaargh
@@ -621,6 +622,19 @@ def upgrade_to_dump_truck():
                 dump_truck_insert_backup(new_backup)
             except:
                 pass
+
+    new_conf = {"default":{}}
+    if "aws" in config.__dict__["_sections"]:
+        aws_data = config.__dict__["_sections"]["aws"]
+        new_conf["default"] = {'access_key': aws_data["access_key"],
+                            'secret_key': aws_data["secret_key"],
+                            'glacier_vault': aws_data["glacier_vault"],
+                            'region_name': aws_data.get("region_name", DEFAULT_LOCATION),
+                            's3_bucket': aws_data["s3_bucket"]}
+        new_conf_file = open(os.path.expanduser("~/.bakthat.yml"), "w")
+        yaml.dump(new_conf, new_conf_file, default_flow_style=False)
+
+
 def main():
     app.run()
 

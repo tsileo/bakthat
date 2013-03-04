@@ -17,8 +17,7 @@ Here are some features:
 
 You can restore backups **with** or **without** bakthat, you just have to download the backup, decrypt it with `Beefish <http://pypi.python.org/pypi/beefish>`_ command-line tool and untar it.
 
-Be careful, if you want to be able to **backup/restore your glacier inventory**, you need **to setup a S3 Bucket even if you are planning to use bakthat exclusively with glacier**, all the archives ids are backed up in JSON format in a S3 Key.
-
+Check out `the documentation to get started <https://bakthat.readthedocs.org/en/latest/>`_.
 
 Changelog
 ---------

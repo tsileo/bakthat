@@ -13,7 +13,7 @@ from boto.s3.key import Key
 from boto.glacier.exceptions import UnexpectedHTTPResponseError
 from boto.exception import S3ResponseError
 
-from bakthat.conf import config, dump_truck, DEFAULT_DESTINATION, DEFAULT_LOCATION
+from bakthat.conf import config, dump_truck, DEFAULT_DESTINATION, DEFAULT_LOCATION, CONFIG_FILE
 
 log = logging.getLogger(__name__)
 
@@ -32,55 +32,26 @@ class glacier_shelve(object):
     def __exit__(self, exc_type, exc_value, traceback):
         self.shelve.close()
 
-
 class BakthatBackend:
     """Handle Configuration for Backends."""
-    def __init__(self, conf=None, extra_conf=[], section="aws"):
-        self.custom_conf = None
-        self.conf = {}
+    def __init__(self, conf=None, profile="default"):
+        self.conf = conf
         if not conf:
-            try:
-                if section == "aws":
-                    self.conf["access_key"] = config.get(section, "access_key")
-                    self.conf["secret_key"] = config.get(section, "secret_key")
-                    self.conf["region_name"] = config.get(section, "region_name")
-
-                for key in extra_conf:
-                    try:
-                        self.conf[key] = config.get(section, key)
-                    except Exception, exc:
-                        log.exception(exc)
-                        log.error("Missing configuration variable.")
-                        self.conf[key] = None
-
-            except ConfigParser.NoOptionError:
-                if section == "aws":
-                    log.error("Configuration file not available.")
-                    log.info("Use 'bakthat configure' to create one.")
-                else:
-                    log.error("No {0} section available in configuration file.".format(section))
-
-        else:
-            if section == "aws":
-                self.conf["access_key"] = conf.get("access_key")
-                self.conf["secret_key"] = conf.get("secret_key")
-                self.conf["region_name"] = conf.get("region_name", DEFAULT_LOCATION)
-
-            for key in extra_conf:
-                self.conf[key] = conf.get(key)
-
+            self.conf = config.get(profile)
+            if not self.conf:
+                raise Exception("No {0} profile defined in {1}.".format(profile, CONFIG_FILE))
+            if not "access_key" in self.conf or not "secret_key" in self.conf:
+                raise Exception("Missing access_key/secret_key in {0} profile ({1}).".format(profile, CONFIG_FILE))
 
 class RotationConfig(BakthatBackend):
     """Hold backups rotation configuration."""
     def __init__(self, conf=None):
-        BakthatBackend.__init__(self, conf, 
-                                extra_conf=["days", "weeks", "months", "first_week_day"],
-                                section="rotation")
+        BakthatBackend.__init__(self, conf, profile="rotation")
 
 class S3Backend(BakthatBackend):
     """Backend to handle S3 upload/download."""
     def __init__(self, conf=None):
-        BakthatBackend.__init__(self, conf, extra_conf=["s3_bucket"])
+        BakthatBackend.__init__(self, conf)
 
         con = boto.connect_s3(self.conf["access_key"], self.conf["secret_key"])
 
@@ -134,7 +105,7 @@ class S3Backend(BakthatBackend):
 class GlacierBackend(BakthatBackend):
     """Backend to handle Glacier upload/download."""
     def __init__(self, conf=None):
-        BakthatBackend.__init__(self, conf, extra_conf=["glacier_vault", "s3_bucket"])
+        BakthatBackend.__init__(self, conf)
 
         con = boto.connect_glacier(aws_access_key_id=self.conf["access_key"],
                                     aws_secret_access_key=self.conf["secret_key"],
