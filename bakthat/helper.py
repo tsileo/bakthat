@@ -9,9 +9,6 @@ log = logging.getLogger(__name__)
 
 class BakHelper:
     """Helper that makes building scripts with bakthat better faster stronger.
-
-    :type set_name: str
-    :param set_name: Backup Set Name
     
     :type destination: str
     :param destination: Destination (glacier|s3)
@@ -19,26 +16,43 @@ class BakHelper:
     :type password: str
     :param password: Password (Empty string to disable encryption)
 
+    :type tags: list
+    :param tags: List of tags
     """
-    def __init__(self, set_name, destination=DEFAULT_DESTINATION, password="", **kwargs):
+    def __init__(self, destination=DEFAULT_DESTINATION, password="", **kwargs):
         self.set_name = set_name
         self.destination = destination
         self.password = password
-        self.sync = None
+        self.tags = kwargs.get("tags", [])
+        self.syncer = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        log.debug("auto sync")
+        self.sync()
+
+    def sync(self):
+        """Shortcut for calling BakSyncer."""
+        if self.syncer:
+            try:
+                return self.syncer.sync()
+            except Exception, exc:
+                log.exception(exc)
 
     def enable_sync(self, api_url, auth=None):
-        """Enable synchronization with BakSyncer (optional).
+        """Enable synchronization with :class:`bakthat.sync.BakSyncer` (optional).
 
         :type api_url: str
         :param api_url: Base API URL.
         
         :type auth: tuple
         :param auth: Optional, tuple/list (username, password) for API authentication.
-
         """
-        log.info("Enabling BakSyncer to {0}".format(api_url))
+        log.debug("Enabling BakSyncer to {0}".format(api_url))
         from bakthat.sync import BakSyncer
-        self.sync = BakSyncer(api_url, auth)
+        self.syncer = BakSyncer(api_url, auth)
 
     def backup(self, filename, **kwargs):
         """Perform backup.
@@ -52,18 +66,16 @@ class BakHelper:
         :type destination: str
         :keyword destination: Override already set destination.
 
+        :type tags: list
+        :keyword tags: Tags list
+
         :rtype: dict
         :return: A dict containing the following keys: stored_filename, size, metadata and filename.
-
         """
         password = kwargs.get("password", self.password)
         destination = kwargs.get("destination", self.destination)
-        backup = bakthat.backup(filename, destination=destination, password=password)
-        
-        if self.sync:
-            self.sync.post(backup)
-        
-        return backup
+        tags = kwargs.get("tags", self.tags)
+        return bakthat.backup(filename, destination=destination, password=password, tags=tags)
 
     def restore(self, filename, **kwargs):
         """Restore backup in the current working directory.
@@ -79,7 +91,6 @@ class BakHelper:
 
         :rtype: bool
         :return: True if successful.
-
         """
         password = kwargs.get("password", self.password)
         destination = kwargs.get("destination", self.destination)
@@ -100,7 +111,6 @@ class BakHelper:
         
         :rtype: list
         :return: A list containing the deleted keys (S3) or archives (Glacier).
-
         """
         destination = kwargs.get("destination", self.destination)
         deleted = bakthat.delete_older_than(filename, interval, destination=destination)
@@ -134,7 +144,6 @@ class BakHelper:
         
         :rtype: list
         :return: A list containing the deleted keys (S3) or archives (Glacier).
-
         """
         log.info("Rotating backup")
         destination = kwargs.pop("destination", self.destination)

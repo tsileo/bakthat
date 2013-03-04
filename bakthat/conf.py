@@ -2,6 +2,7 @@
 import ConfigParser
 import os
 from dumptruck import DumpTruck
+import math
 
 DEFAULT_LOCATION = "us-east-1"
 DEFAULT_DESTINATION = "s3"
@@ -11,7 +12,7 @@ config = ConfigParser.SafeConfigParser()
 config.read(os.path.expanduser("~/.bakthat.conf"))
 
 # DumpTruck initialization
-dump_truck = DumpTruck(dbname=os.path.expanduser("~/.bakthat.dt"))
+dump_truck = DumpTruck(dbname=os.path.expanduser("~/.bakthat.dt"), vars_table="config")
 
 if not "backups" in dump_truck.tables():
     # We initialize DumpTruck, with dummy data that won't be inserted.
@@ -21,7 +22,9 @@ if not "backups" in dump_truck.tables():
                     'backup_date': 1361994976,
                     'filename': 'filename',
                     'backend': 's3',
-                    'is_deleted': False}, "backups")
+                    'is_deleted': False,
+                    'last_updated': 1361994976,
+                    'tags': []}, "backups")
     dump_truck.create_index(["stored_filename"], "backups", unique=True)
 
 if not "inventory" in dump_truck.tables():
@@ -31,3 +34,8 @@ if not "inventory" in dump_truck.tables():
 if not "jobs" in dump_truck.tables():
     dump_truck.create_table({"filename": "filename", "job_id": "job_id"}, "jobs")
     dump_truck.create_index(["filename"], "jobs", unique=True)
+
+if not "config" in dump_truck.tables():
+    dump_truck.save_var("client_id", "")
+    dump_truck.save_var("sync_ts", 0)
+    dump_truck.save_var("tags", set())

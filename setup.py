@@ -7,7 +7,7 @@ def read(fname):
 
 setup(
     name = "bakthat",
-    version = "0.3.10",
+    version = "0.4.0",
     author = "Thomas Sileo",
     author_email = "thomas.sileo@gmail.com",
     description = "Compress, encrypt (symmetric encryption) and upload files directly to Amazon S3/Glacier in a single command. Can also be used as a python module.",
@@ -17,7 +17,7 @@ setup(
     packages=find_packages(exclude=['ez_setup', 'tests', 'tests.*']),
     long_description= read('README.rst'),
     install_requires=[
-        "aaargh", "boto", "pycrypto", "beefish", "grandfatherson", "dumptruck"
+        "aaargh", "boto", "pycrypto", "beefish", "grandfatherson", "dumptruck", "byteformat"
         ],
     entry_points={'console_scripts': ["bakthat = bakthat:main"]},
     classifiers=[

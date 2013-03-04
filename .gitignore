@@ -7,3 +7,4 @@ bakthat.egg-info/
 *tar.gz
 *.zip
 .pypirc
+docs/_build

@@ -10,7 +10,8 @@ import logging
 from bakthat.conf import config, DEFAULT_DESTINATION, DEFAULT_LOCATION
 from bakthat.backends import GlacierBackend
 
-log = logging.getLogger(__name__)
+log = logging.getLogger()
+logging.basicConfig(level=logging.DEBUG)
 
 class BakthatTestCase(unittest.TestCase):
 

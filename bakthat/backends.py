@@ -305,11 +305,14 @@ class GlacierBackend(BakthatBackend):
             self.backup_inventory()
 
     def upgrade_to_dump_truck(self):
-        with glacier_shelve() as d:
-            archives = d["archives"]
-            if "archives" in d:
-                for key, archive_id in archives.items():
-                    print {"filename": key, "archive_id": archive_id}
-                    dump_truck.insert({"filename": key, "archive_id": archive_id}, "inventory")
-                    del archives[key]
-            d["archives"] = archives
+        try:
+            with glacier_shelve() as d:
+                archives = d["archives"]
+                if "archives" in d:
+                    for key, archive_id in archives.items():
+                        print {"filename": key, "archive_id": archive_id}
+                        dump_truck.insert({"filename": key, "archive_id": archive_id}, "inventory")
+                        del archives[key]
+                d["archives"] = archives
+        except Exception, exc:
+            log.exception(exc)
