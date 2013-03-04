@@ -32,11 +32,12 @@ def prepare_backup(backup):
     dump_truck.save_var("tags", tags_set)
     return backup
 
-def dump_truck_get_backup(filename, destination=""):
+def dump_truck_get_backup(filename, destination="", profile="default"):
     query = _get_query(destination=destination, stored_filename=filename)
+    profile_query = _get_profile_query(profile)
     query = "SELECT stored_filename FROM backups \
-            WHERE {0} AND is_deleted == 0 ORDER BY last_updated DESC LIMIT 0, 1".format(query)
-
+            WHERE {0} AND {1} ORDER BY last_updated DESC LIMIT 0, 1".format(query, profile_query)
+    print query
     backups = dump_truck.execute(query)
     if backups:
         return backups[0]
@@ -109,7 +110,7 @@ def _get_profile_query(profile):
                                 profile_conf.get("s3_bucket")).hexdigest()
             glacier_hash_key = s3_hash_key = hashlib.sha512(profile_conf.get("access_key") + \
                                 profile_conf.get("glacier_vault")).hexdigest()
-            return " ((backend == 's3' AND backend_hash == '{0}') AND \
+            return " ((backend == 's3' AND backend_hash == '{0}') OR \
                     (backend == 'glacier' AND backend_hash == '{1}'))".format(s3_hash_key,
                                                                         glacier_hash_key)
         else:
@@ -163,7 +164,6 @@ def _get_query(**kwargs):
     querys = filter(None, querys)
     query = " AND".join(querys)
     log.debug("_get_query: {0}".format(query))
-    print query
     return query
 
 def _timedelta_total_seconds(td):

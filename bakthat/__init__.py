@@ -344,7 +344,7 @@ def show(query="", destination=DEFAULT_DESTINATION, tags=[], profile="", help="P
     query = _get_query(tags=tags, destination=destination, query=query, profile=profile)
     if query:
         query = "WHERE " + query
-    backups = dump_truck.execute("SELECT * FROM backups {0}".format(query))
+    backups = dump_truck.execute("SELECT * FROM backups {0} ORDER BY last_updated DESC".format(query))
     _display_backups(backups)
 
 
@@ -449,7 +449,7 @@ def restore(filename, destination=DEFAULT_DESTINATION, profile="default", **kwar
         log.error("No file to restore, use -f to specify one.")
         return
 
-    backup = dump_truck_get_backup(filename, destination)
+    backup = dump_truck_get_backup(filename, destination, profile)
 
     if not backup:
         log.error("No file matched.")
@@ -526,7 +526,7 @@ def delete(filename, destination=DEFAULT_DESTINATION, profile="default", **kwarg
         log.error("No file to delete, use -f to specify one.")
         return
 
-    backup = dump_truck_get_backup(filename, destination)
+    backup = dump_truck_get_backup(filename, destination, profile)
     if not backup:
         log.error("No file matched.")
         return
