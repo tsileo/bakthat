@@ -17,7 +17,7 @@ Here are some features:
 
 You can restore backups **with** or **without** bakthat, you just have to download the backup, decrypt it with `Beefish <http://pypi.python.org/pypi/beefish>`_ command-line tool and untar it.
 
-Check out `the documentation to get started <https://bakthat.readthedocs.org/en/latest/>`_.
+Check out `the documentation to get started <http://docs.bakthat.io>`_.
 
 Changelog
 ---------
@@ -42,8 +42,9 @@ Changes:
 - BakSyncer to help keep you list sync over a custom REST API
 - Now adding a dot between the original filename and the date component
 - Tags support (-t/--tags argument)
+- Profiles support (-p/--profile argument)
 - New show command, with search support (tags/filename/destination)
-- Added documentation
+- `Hosted documentation <http://docs.bakthat.io>`_
 
 
 0.3.10
