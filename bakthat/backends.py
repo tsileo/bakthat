@@ -106,8 +106,8 @@ class S3Backend(BakthatBackend):
 
 class GlacierBackend(BakthatBackend):
     """Backend to handle Glacier upload/download."""
-    def __init__(self, conf=None):
-        BakthatBackend.__init__(self, conf, profile="default")
+    def __init__(self, conf=None, profile="default"):
+        BakthatBackend.__init__(self, conf, profile)
 
         con = boto.connect_glacier(aws_access_key_id=self.conf["access_key"],
                                     aws_secret_access_key=self.conf["secret_key"],
