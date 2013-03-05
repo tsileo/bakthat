@@ -24,7 +24,7 @@ class BakSyncer(BakthatBackend):
     - API user/password
     - a hash (hashlib.sha512) of your access_key concatened with 
         your s3_bucket or glacier_vault, to be able to sync multiple
-        client with the same configuration stored as metadata for each bakckup.
+        client with the same configuration stored as metadata for each bakckupyy.
 
     :type api_url: str
     :param api_url: Base API URL
@@ -81,7 +81,7 @@ class BakSyncer(BakthatBackend):
         self.register()
         
         last_sync_ts = dump_truck.get_var("sync_ts")
-        to_insert_in_mongo = dump_truck.execute("SELECT stored_filename, last_updated FROM backups WHERE last_updated > {0:d}".format(last_sync_ts))
+        to_insert_in_mongo = dump_truck.execute("SELECT * FROM backups WHERE last_updated > {0:d}".format(last_sync_ts))
         data = dict(sync_ts=last_sync_ts, to_insert_in_mongo=to_insert_in_mongo)
         r_kwargs = self.request_kwargs.copy()
         log.debug("Initial payload: {0}".format(data))
