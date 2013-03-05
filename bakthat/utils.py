@@ -27,9 +27,10 @@ def prepare_backup(backup):
 
     """
     backup["last_updated"] = int(datetime.utcnow().strftime("%s"))
-    tags_set = dump_truck.get_var("tags")
-    tags_set.update(backup["tags"])
-    dump_truck.save_var("tags", tags_set)
+    if backup.get("tags", []):
+        tags_set = dump_truck.get_var("tags")
+        tags_set.update(backup.get("tags"))
+        dump_truck.save_var("tags", tags_set)
     return backup
 
 def dump_truck_get_backup(filename, destination="", profile="default"):
