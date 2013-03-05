@@ -19,6 +19,41 @@ You can restore backups **with** or **without** bakthat, you just have to downlo
 
 Check out `the documentation to get started <http://docs.bakthat.io>`_.
 
+
+Overview
+--------
+
+::
+
+    $ pip install bakthat
+
+    $ bakthat configure
+    
+    $ bakthat backup -f mydir
+    Backing up mydir
+    Password (blank to disable encryption): 
+    Password confirmation: 
+    Compressing...
+    Encrypting...
+    Uploading...
+    Upload completion: 0%
+    Upload completion: 100%
+    
+    $ bakthat show
+    2013-03-05T19:36:15 s3  3.1 KB  mydir.20130305193615.tgz.enc
+
+    $ bakthat restore -f mydir
+    Restoring mydir.20130305193615.tgz.enc
+    Password: 
+    Downloading...
+    Decrypting...
+    Uncompressing...
+
+    $ bakthat delete -f mydir.20130305193615.tgz.enc
+    Deleting mydir.20130305193615.tgz.enc
+
+
+
 Changelog
 ---------
 

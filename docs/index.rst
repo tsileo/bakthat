@@ -37,31 +37,6 @@ Requirements
 * `sh <http://amoffat.github.com/sh/>`_
 
 
-Installation
-------------
-
-With pip/easy_install:
-
-::
-
-    $ pip install bakthat
-
-From source:
-
-::
-
-    $ git clone https://github.com/tsileo/bakthat.git
-    $ cd bakthat
-    $ sudo python setup.py install
-
-
-Next, you need to set your AWS credentials:
-
-::
-
-    $ bakthat configure
-
-
 Overview
 --------
 
@@ -93,6 +68,31 @@ Overview
 
     $ bakthat delete -f mydir.20130305193615.tgz.enc
     Deleting mydir.20130305193615.tgz.enc
+
+
+Installation
+------------
+
+With pip/easy_install:
+
+::
+
+    $ pip install bakthat
+
+From source:
+
+::
+
+    $ git clone https://github.com/tsileo/bakthat.git
+    $ cd bakthat
+    $ sudo python setup.py install
+
+
+Next, you need to set your AWS credentials:
+
+::
+
+    $ bakthat configure
 
 
 User Guide
