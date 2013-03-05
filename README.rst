@@ -25,7 +25,7 @@ Changelog
 0.4.0
 ~~~~~
 
-__Not on pypi yet, I'm making final tests before releasing.__
+**Not on pypi yet, I'm making final tests before releasing.**
 
 If you come from bakthat 0.3.x, you need to run:
 
@@ -33,8 +33,14 @@ If you come from bakthat 0.3.x, you need to run:
 
     $ bakthat upgrade_to_dump_truck
 
+And you also need to run again **bakthat configure**.
 
-Changes:
+::
+
+    $ cat ~/.bakthat.conf
+    $ bakthat configure
+
+**Changes:**
 
 - Using `DumpTruck <http://www.dumptruck.io/>`_ instead of `shelve <http://docs.python.org/library/shelve.html>`_
 - Save backups metadata for both backends

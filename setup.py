@@ -13,7 +13,7 @@ setup(
     description = "Compress, encrypt (symmetric encryption) and upload files directly to Amazon S3/Glacier in a single command. Can also be used as a python module.",
     license = "MIT",
     keywords = "aws s3 glacier backup restore archive",
-    url = "https://github.com/tsileo/bakthat",
+    url = "http://docs.bakthat.io",
     packages=find_packages(exclude=['ez_setup', 'tests', 'tests.*']),
     long_description= read('README.rst'),
     install_requires=[
