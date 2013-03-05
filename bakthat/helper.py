@@ -13,8 +13,10 @@ log = logging.getLogger(__name__)
 
 
 class BakHelper:
-    """Context manager that makes building scripts with bakthat better faster stronger.
+    """Helper that makes building scripts with bakthat better faster stronger.
     
+    Designed to be used as a context manager.
+
     :type dir_prefix: str
     :param dir_prefix: Prefix for the created temporary directory.
 
@@ -30,7 +32,7 @@ class BakHelper:
     :type tags: list
     :param tags: List of tags
     """
-    def __init__(self, dir_prefix, **kwargs):
+    def __init__(self, dir_prefix="tmp", **kwargs):
         self.dir_prefix = "{0}_".format(dir_prefix)
         self.destination = kwargs.get("destination", DEFAULT_DESTINATION)
         self.password = kwargs.get("password", "")
