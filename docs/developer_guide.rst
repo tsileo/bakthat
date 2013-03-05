@@ -23,15 +23,14 @@ As a module
                                 'months': 6,
                                 'weeks': 6}}
 
-    bakthat.backup("/dir/i/wanto/bak", conf=aws_conf)
+    bakthat.backup("/dir/i/wanto/bak", conf=bakthat_conf)
 
-    bakthat.backup("/dir/i/wanto/bak", conf=aws_conf, destination="glacier")
+    bakthat.backup("/dir/i/wanto/bak", conf=bakthat_conf, destination="glacier")
 
-    # or if you want to have generated the configuration file with "bakthat configure"
-    # and want to use this file:
+    # or if you want to have generated the configuration file with "bakthat configure" or created ~/.bakthat.yml
     bakthat.backup("/dir/i/wanto/bak")
 
     bakthat.ls()
 
     # restore in the current working directory
-    bakthat.restore("bak", conf=aws_conf)
+    bakthat.restore("bak", conf=bakthat_conf)

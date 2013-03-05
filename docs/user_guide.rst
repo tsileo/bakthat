@@ -5,10 +5,202 @@ User Guide
 
 Everything you need to know as a user.
 
+
+Getting Started
+---------------
+
+Basic usage, "bakthat -h" or "bakthat <command> -h" to show the help.
+
+S3 is the default destination, to use Glacier just add "-d glacier" or "--destination glacier".
+
+If you haven't configured bakthat yet, you should run:
+
+::
+
+    $ bakthat configure
+
+
+Backup
+------
+
+::
+
+    $ bakthat backup --help
+    usage: bakthat backup [-h] [-f FILENAME] [-d DESTINATION] [--prompt PROMPT]
+                          [-t TAGS] [-p PROFILE]
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      -f FILENAME, --filename FILENAME
+      -d DESTINATION, --destination DESTINATION
+                            s3|glacier
+      --prompt PROMPT       yes|no
+      -t TAGS, --tags TAGS  space separated tags
+      -p PROFILE, --profile PROFILE
+                            profile name (default by default)
+
+
+When backing up file, bakthat store files in gzip format, under the following format: **originaldirname.utctime.tgz**, where utctime is a UTC datetime (%Y%m%d%H%M%S).
+
+.. note::
+
+    If you try to backup a file already gziped, bakthat will only rename it (change extention to .tgz and append utctime).
+
+Bakthat let you tag backups to retrieve them faster, when backing up a file, just append the **--tags**/**-t** argument, tags are space separated, when adding multiple tags, just quote the whole string (e.g. **--tags "tag1 tag2 tag3"**)
+
+If you don't specify a filename/dirname, bakthat will backup the current working directory.
+
+::
+
+    $ cd /dir/i/want/to/bak
+    backup to S3
+    $ bakthat backup
+    or
+    $ bakthat backup -f /dir/i/want/to/bak
+
+    $ bakthat backup -f /my/dir -t "tag1 tag2"
+
+    you can also backup a single file
+    $ bakthat backup -f /home/thomas/mysuperfile.txt
+
+    backup to Glacier
+    $ bakthat backup -d glacier
+
+
+.. note::
+
+    You can change the temp directory location by setting the TMPDIR, TEMP or TMP environment variables if the backup is too big to fit in the default temp directory.
+
+    ::
+
+        $ export TMP=/home/thomas
+
+Restore
+-------
+
+::
+
+    $ bakthat restore --help
+    usage: bakthat restore [-h] [-f FILENAME] [-d DESTINATION] [-p PROFILE]
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      -f FILENAME, --filename FILENAME
+      -d DESTINATION, --destination DESTINATION
+                            s3|glacier
+      -p PROFILE, --profile PROFILE
+                            profile name (default by default)
+
+When restoring a backup, you can:
+
+- specify **filename**: the latest backups will be restored
+- specify **stored filename** directly, if you want to restore an older version.
+
+::
+
+    $ bakthat restore -f bak
+
+    if you want to restore an older version
+    $ bakthat restore -f bak20120927
+    or
+    $ bakthat restore -f bak20120927.tgz.enc
+
+    restore from Glacier
+    $ bakthat restore -f bak -d glacier
+
+.. note::
+
+    When restoring from Glacier, the first time you call the restore command, the job is initiated, then you can check manually whether or not the job is completed (it takes 3-5h to complete), if so the file will be downloaded and restored.
+
+
+Listing backups
+---------------
+
+Let's start with the help for the show subcommand:
+
+::
+
+    $ bakthat show --help
+    usage: bakthat show [-h] [-q QUERY] [-d DESTINATION] [-t TAGS] [-p PROFILE]
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      -q QUERY, --query QUERY
+                            search filename for query
+      -d DESTINATION, --destination DESTINATION
+                            glacier|s3, default both
+      -t TAGS, --tags TAGS  tags space separated
+      -p PROFILE, --profile PROFILE
+                            profile name (all profiles are displayed by default)
+
+So when listing backups, you can:
+
+- filter by query (filename/stored filename)
+- filter by destination (either glacier or s3)
+- filter by tags
+- filter by profile (if you manage multiple AWS/bucket/vault)
+
+Example:
+
+::
+
+    $ bakthat show -d s3 -q mydir
+
+
+Delete
+------
+
+If the backup is not stored in the default destination, you have to specify it manually.
+
+::
+
+    $ bakthat delete -f bak
+
+    $ bakthat delete -f bak -d glacier
+
+
+Delete older than
+-----------------
+
+Delete backup older than the given string interval, like 1M for 1 month and so on.
+
+- **s** seconds
+- **m** minutes
+- **h** hours
+- **D** days
+- **W** weeks
+- **M** months
+- **Y** Years
+
+::
+
+    $ bakthat remove_older_than -f bakname -i 3M
+
+    $ bakthat remove_older_than -f bakname -i 3M2D8h20m5s
+
+
+Backup rotation
+---------------
+
+If you make automated with baktaht, it makes sense to rotate your backups.
+
+Bakthat allows you to rotate backups using `Grandfather-father-son backup rotation <http://en.wikipedia.org/wiki/Backup_rotation_scheme#Grandfather-father-son>`_, you can set a default rotation configuration.
+
+::
+
+    $ bakthat configure_backups_rotation
+
+Now you can rotate a backup set:
+
+::
+
+    $ bakthat rotate_backups -f bakname
+
+
 Configuration
 -------------
 
-Bakthat stores configuration in `YAML <http://yaml.org/>`_ format, to have the same configuration handling for both command line and Pytohn module use.
+Bakthat stores configuration in `YAML <http://yaml.org/>`_ format, to have the same configuration handling for both command line and Python module use.
 
 You can also handle **multiples profiles** if you need to manage multiple AWs account or vaults/buckets.
 
@@ -21,6 +213,8 @@ To get started, you can run **bakthat configure**.
     $ bakthat configure
 
 Here is what a configuration object looks like:
+
+.. code-block:: yaml
 
     access_key: YOUR_ACCESS_KEY
     secret_key: YOUR_SECRET_KEY
@@ -52,127 +246,54 @@ Here is how profiles are stored, you can either create them manually or with com
       s3_bucket: mybucket
 
 
-Getting Started
+To create a profile from command line with bakthat:
+
+::
+
+    $ bakthat configure --profile mynewprofile
+
+    $ bakthat configure -h
+    usage: bakthat configure [-h] [-p PROFILE]
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      -p PROFILE, --profile PROFILE
+                            profile name (default by default)
+
+
+Once your profile is configured, you can use it with **--profile**/**-p** argument.
+
+::
+
+    $ bakthat backup -p myprofile
+    $ bakthat show -p myprofile
+
+
+Stored metadata
 ---------------
 
-Basic usage, "bakthat -h" or "bakthat <command> -h" to show the help.
+To be faster, batkaht store some data about your backups in a SQLite database (using `DumpTruck <http://www.dumptruck.io/>`_ as wrapper) for few reasons:
 
-S3 is the default destination, to use Glacier just add "-d glacier" or "--destination glacier".
+- to allow you to filter them efficiently.
+- to avoid making a lot of requests to AWS.
+- to let you sync your bakthat data with multiple servers.
 
-If you haven't configured bakthat yet, you should run:
+Here is a example of data stored in the SQLite database:
 
-::
+.. code-block:: python
 
-    $ bakthat configure
+    {u'backend': u's3',
+     u'backend_hash': u'9813aa99062d7a226f3327478eff3f63bf5603cd86999a42a2655f5d460e8e143c63822cb8e2f8998a694afee8d30c4924923dff695c6e5f739dffdd65768408',
+     u'backup_date': 1362508575,
+     u'filename': u'mydir',
+     u'is_deleted': 0,
+     u'last_updated': 1362508727,
+     u'metadata': {u'is_enc': True},
+     u'size': 3120,
+     u'stored_filename': u'mydir.20130305193615.tgz.enc',
+     u'tags': []}
 
-
-Backup
-~~~~~~
-
-::
-
-    $ cd /dir/i/want/to/bak
-    backup to S3
-    $ bakthat backup
-    or
-    $ bakthat backup -f /dir/i/want/to/bak
-
-    you can also backup a single file
-    $ bakthat backup -f /home/thomas/mysuperfile.txt
-
-    backup to Glacier
-    $ bakthat backup -d glacier
-
-
-You can change the temp directory location by setting the TMPDIR, TEMP or TMP environment variables if the backup is too big to fit in the default temp directory.
-
-::
-
-    $ export TMP=/home/thomas
-
-Restore
-~~~~~~~
-
-You can restore the latest version of a backup just by specifying the begining of the filename.
-
-::
-
-    $ bakthat restore -f bak
-
-    if you want to restore an older version
-    $ bakthat restore -f bak20120927
-    or
-    $ bakthat restore -f bak20120927.tgz.enc
-
-    restore from Glacier
-    $ bakthat restore -f bak -d glacier
-
-When restoring from Glacier, the first time you call the restore command, the job is initiated, then you can check manually whether or not the job is completed (it takes 3-5h to complete), if so the file will be downloaded and restored.
-
-List
-~~~~
-
-::
-
-    $ bakthat ls
-    or 
-    $ bakthat ls -d s3
-
-    $ bakthat ls -d glacier
-
-
-Delete
-~~~~~~
-
-::
-
-    $ bakthat delete -f bak
-
-    $ bakthat delete -f bak -d glacier
-
-Info
-~~~~
-
-You can quickly check when was the last time you backed up a directory:
-
-::
-
-    $ bakthat info
-
-
-Delete older than
------------------
-
-Delete backup older than the given interval.
-
-- **s** seconds
-- **m** minutes
-- **h** hours
-- **D** days
-- **W** weeks
-- **M** months
-- **Y** Years
-
-::
-
-    $ bakthat remove_older_than -f bakname -i 3M
-
-    $ bakthat remove_older_than -f bakname -i 3M2D8h20m5s
-
-Backup rotation
----------------
-
-Rotate backup using `Grandfather-father-son backup rotation <http://en.wikipedia.org/wiki/Backup_rotation_scheme#Grandfather-father-son>`_, you can set a default rotation configuration.
-
-::
-
-    $ bakthat configure_backups_rotation
-
-Now you can rotate a backup set:
-
-::
-
-    $ bakthat rotate_backups -f bakname
+All the keys are explicit, except **backend_hash**, which is the hash of your AWS access key concatenated with either the S3 bucket, either the Glacier vault. This key is used when syncing backups with multiple servers.
 
 
 Backup/Restore Glacier inventory
