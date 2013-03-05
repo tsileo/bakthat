@@ -17,7 +17,7 @@ setup(
     packages=find_packages(exclude=['ez_setup', 'tests', 'tests.*']),
     long_description= read('README.rst'),
     install_requires=[
-        "aaargh", "boto", "pycrypto", "beefish", "grandfatherson", "dumptruck", "byteformat", "pyyaml"
+        "aaargh", "boto", "pycrypto", "beefish", "grandfatherson", "dumptruck", "byteformat", "pyyaml", "sh"
         ],
     entry_points={'console_scripts': ["bakthat = bakthat:main"]},
     classifiers=[

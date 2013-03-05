@@ -34,6 +34,8 @@ Requirements
 * `DumpTruck <http://www.dumptruck.io/>`_
 * `byteformat <https://pypi.python.org/pypi/byteformat>`_
 * `pyyaml <http://pyyaml.org>`_
+* `sh <http://amoffat.github.com/sh/>`_
+
 
 Installation
 ------------

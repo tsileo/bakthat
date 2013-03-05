@@ -198,7 +198,7 @@ def rotate_backups(filename, destination=DEFAULT_DESTINATION, profile="default",
 @app.cmd_arg('--prompt', type=str, help="yes|no", default="yes")
 @app.cmd_arg('-t', '--tags', type=str, help="space separated tags", default="")
 @app.cmd_arg('-p', '--profile', type=str, default="default", help="profile name (default by default)")
-def backup(filename, destination=None, prompt="yes", tags=[], profile="default", **kwargs):
+def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profile="default", **kwargs):
     """Perform backup.
 
     :type filename: str
@@ -424,7 +424,7 @@ def configure_backups_rotation(profile="default"):
 @app.cmd_arg('-f', '--filename', type=str, default="")
 @app.cmd_arg('-d', '--destination', type=str, help="s3|glacier", default=DEFAULT_DESTINATION)
 @app.cmd_arg('-p', '--profile', type=str, default="default", help="profile name (default by default)")
-def restore(filename, destination=DEFAULT_DESTINATION, profile="default", **kwargs):
+def restore(filename=os.getcwd(), destination=DEFAULT_DESTINATION, profile="default", **kwargs):
     """Restore backup in the current working directory.
 
     :type filename: str
