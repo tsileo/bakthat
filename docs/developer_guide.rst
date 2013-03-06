@@ -92,7 +92,7 @@ You can also use it like a normal class:
 Create a MySQL backup script
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Here is a MySQL backup script, it makes use of `sh <http://amoffat.github.com/sh/>`_) to call system **mysqldump**.
+Here is a MySQL backup script, it makes use of `sh <http://amoffat.github.com/sh/>`_ to call system **mysqldump**.
 
 .. code-block:: python
 
