@@ -2,18 +2,16 @@
 Bakthat
 =======
 
-Bakthat is a MIT licensed backup tools, it's both a friendly command line interface and a Python module that helps you manage backups on Amazon S3/Glacier.
-
-It lets you compress, encrypt (symmetric encryption) and upload your files directly to Amazon S3/Glacier in a single command. It also make restoring backups a breeze.
+Bakthat is a MIT licensed backup framework written in Python, it's both a command line tool and a Python module that helps you manage backups on Amazon S3/Glacier. It automatically compress, encrypt (symmetric encryption) and upload your files.
 
 Here are some features:
 
 * Compress with `tarfile <http://docs.python.org/library/tarfile.html>`_
 * Encrypt with `beefish <http://pypi.python.org/pypi/beefish>`_ (**optional**)
 * Upload/download to S3 or Glacier with `boto <http://pypi.python.org/pypi/boto>`_
-* Local Glacier inventory stored in a SQLite database with `DumpTruck <http://www.dumptruck.io/>`_
-* Automatically handle/backup/restore a custom Glacier inventory to S3
+* Local backups inventory stored in a SQLite database with `DumpTruck <http://www.dumptruck.io/>`_
 * Delete older than, and `Grandfather-father-son backup rotation <http://en.wikipedia.org/wiki/Backup_rotation_scheme#Grandfather-father-son>`_ supported
+* Possibility to sync backups database between multiple clients via a centralized server
 
 You can restore backups **with** or **without** bakthat, you just have to download the backup, decrypt it with `Beefish <http://pypi.python.org/pypi/beefish>`_ command-line tool and untar it.
 
@@ -59,8 +57,6 @@ Changelog
 
 0.4.0
 ~~~~~
-
-**Not on pypi yet, I'm making final tests before releasing.**
 
 If you come from bakthat 0.3.x, you need to run:
 

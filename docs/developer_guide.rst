@@ -89,6 +89,33 @@ You can also use it like a normal class:
     bh.rotate("myfile.txt")
 
 
+Create a MySQL backup script
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Here is a MySQL backup script, it makes use of `sh <http://amoffat.github.com/sh/>`_) to call system **mysqldump**.
+
+.. code-block:: python
+
+    import logging
+    import sh
+    logging.basicConfig(level=logging.INFO)
+
+    from bakthat.helper import BakHelper
+
+    BACKUP_NAME = "myhost_mysql"
+    BACKUP_PASSWORD = "mypassword"
+    MYSQL_USER = "root"
+    MYSQL_PASSWORD = "mypassword"
+
+    with BakHelper(BACKUP_NAME, password=BACKUP_PASSWORD, tags=["mysql"]) as bh:
+        sh.mysqldump("-p{0}".format(MYSQL_PASSWORD),
+                    u=MYSQL_USER,
+                    all_databases=True,
+                    _out="dump.sql")
+        bh.backup()
+        bh.rotate()
+
+
 Accessing bakthat SQLite database
 ---------------------------------
 
