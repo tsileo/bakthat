@@ -26,12 +26,15 @@ Backup
 ::
 
     $ bakthat backup --help
-    usage: bakthat backup [-h] [-f FILENAME] [-d DESTINATION] [--prompt PROMPT]
-                          [-t TAGS] [-p PROFILE]
+    usage: bakthat backup [-h] [-d DESTINATION] [--prompt PROMPT] [-t TAGS]
+                      [-p PROFILE]
+                      [filename]
+
+    positional arguments:
+      filename
 
     optional arguments:
       -h, --help            show this help message and exit
-      -f FILENAME, --filename FILENAME
       -d DESTINATION, --destination DESTINATION
                             s3|glacier
       --prompt PROMPT       yes|no
@@ -56,12 +59,12 @@ If you don't specify a filename/dirname, bakthat will backup the current working
     backup to S3
     $ bakthat backup
     or
-    $ bakthat backup -f /dir/i/want/to/bak
+    $ bakthat backup /dir/i/want/to/bak
 
-    $ bakthat backup -f /my/dir -t "tag1 tag2"
+    $ bakthat backup /my/dir -t "tag1 tag2"
 
     you can also backup a single file
-    $ bakthat backup -f /home/thomas/mysuperfile.txt
+    $ bakthat backup /home/thomas/mysuperfile.txt
 
     backup to Glacier
     $ bakthat backup -d glacier
@@ -81,11 +84,13 @@ Restore
 ::
 
     $ bakthat restore --help
-    usage: bakthat restore [-h] [-f FILENAME] [-d DESTINATION] [-p PROFILE]
+    usage: bakthat restore [-h] [-d DESTINATION] [-p PROFILE] filename
+
+    positional arguments:
+      filename
 
     optional arguments:
       -h, --help            show this help message and exit
-      -f FILENAME, --filename FILENAME
       -d DESTINATION, --destination DESTINATION
                             s3|glacier
       -p PROFILE, --profile PROFILE
@@ -98,15 +103,15 @@ When restoring a backup, you can:
 
 ::
 
-    $ bakthat restore -f bak
+    $ bakthat restore bak
 
     if you want to restore an older version
-    $ bakthat restore -f bak20120927
+    $ bakthat restore bak20120927
     or
-    $ bakthat restore -f bak20120927.tgz.enc
+    $ bakthat restore bak20120927.tgz.enc
 
     restore from Glacier
-    $ bakthat restore -f bak -d glacier
+    $ bakthat restore bak -d glacier
 
 .. note::
 
@@ -121,12 +126,13 @@ Let's start with the help for the show subcommand:
 ::
 
     $ bakthat show --help
-    usage: bakthat show [-h] [-q QUERY] [-d DESTINATION] [-t TAGS] [-p PROFILE]
+    usage: bakthat show [-h] [-d DESTINATION] [-t TAGS] [-p PROFILE] [query]
+
+    positional arguments:
+      query                 search filename for query
 
     optional arguments:
       -h, --help            show this help message and exit
-      -q QUERY, --query QUERY
-                            search filename for query
       -d DESTINATION, --destination DESTINATION
                             glacier|s3, default both
       -t TAGS, --tags TAGS  tags space separated
@@ -144,7 +150,11 @@ Example:
 
 ::
 
-    $ bakthat show -d s3 -q mydir
+    show everything
+    $ bakthat show
+
+    search for a file stored on s3:
+    $ bakthat show myfile -d s3
 
 
 Delete
@@ -154,9 +164,9 @@ If the backup is not stored in the default destination, you have to specify it m
 
 ::
 
-    $ bakthat delete -f bak
+    $ bakthat delete bak
 
-    $ bakthat delete -f bak -d glacier
+    $ bakthat delete bak -d glacier
 
 
 Delete older than
@@ -174,9 +184,11 @@ Delete backup older than the given string interval, like 1M for 1 month and so o
 
 ::
 
-    $ bakthat remove_older_than -f bakname -i 3M
+    $ bakthat remove_older_than bakname 3M
 
-    $ bakthat remove_older_than -f bakname -i 3M2D8h20m5s
+    $ bakthat remove_older_than bakname 3M2D8h20m5s
+
+    $ bakthat remove_older_than bakname 3M -d glacier
 
 
 Backup rotation
@@ -194,7 +206,7 @@ Now you can rotate a backup set:
 
 ::
 
-    $ bakthat rotate_backups -f bakname
+    $ bakthat rotate_backups bakname
 
 
 Configuration

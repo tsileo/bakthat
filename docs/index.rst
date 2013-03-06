@@ -45,7 +45,7 @@ Overview
 
     $ bakthat configure
     
-    $ bakthat backup -f mydir
+    $ bakthat backup mydir
     Backing up mydir
     Password (blank to disable encryption): 
     Password confirmation: 
@@ -54,19 +54,25 @@ Overview
     Uploading...
     Upload completion: 0%
     Upload completion: 100%
+
+    or
+
+    $ cd mydir
+    $ bakthat backup
     
     $ bakthat show
     2013-03-05T19:36:15 s3  3.1 KB  mydir.20130305193615.tgz.enc
 
-    $ bakthat restore -f mydir
+    $ bakthat restore mydir
     Restoring mydir.20130305193615.tgz.enc
     Password: 
     Downloading...
     Decrypting...
     Uncompressing...
 
-    $ bakthat delete -f mydir.20130305193615.tgz.enc
+    $ bakthat delete mydir.20130305193615.tgz.enc
     Deleting mydir.20130305193615.tgz.enc
+
 
 
 Installation

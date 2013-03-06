@@ -10,7 +10,7 @@ setup(
     version = "0.4.0",
     author = "Thomas Sileo",
     author_email = "thomas.sileo@gmail.com",
-    description = "Compress, encrypt (symmetric encryption) and upload files directly to Amazon S3/Glacier in a single command. Can also be used as a python module.",
+    description = "Bakthat is a MIT licensed backup framework written in Python, it's both a command line tool and a Python module that helps you manage backups on Amazon S3/Glacier. It automatically compress, encrypt (symmetric encryption) and upload your files.",
     license = "MIT",
     keywords = "aws s3 glacier backup restore archive",
     url = "http://docs.bakthat.io",

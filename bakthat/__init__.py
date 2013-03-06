@@ -83,8 +83,8 @@ def match_filename(filename, destination=DEFAULT_DESTINATION, conf=None, profile
 
 
 @app.cmd(help="Delete backups older than the given interval string.")
-@app.cmd_arg('-f', '--filename', type=str, default=os.getcwd())
-@app.cmd_arg('-i', '--interval', type=str, help="Interval string like 1M, 1W, 1M3W4h2s")
+@app.cmd_arg('filename', type=str, help="Filename to delete")
+@app.cmd_arg('interval', type=str, help="Interval string like 1M, 1W, 1M3W4h2s")
 @app.cmd_arg('-d', '--destination', type=str, help="s3|glacier")
 @app.cmd_arg('-p', '--profile', type=str, default="default", help="profile name (default by default)")
 def delete_older_than(filename, interval, destination=DEFAULT_DESTINATION, profile="default", **kwargs):
@@ -126,7 +126,7 @@ def delete_older_than(filename, interval, destination=DEFAULT_DESTINATION, profi
     return deleted
 
 @app.cmd(help="Rotate backups using Grandfather-father-son backup rotation scheme.")
-@app.cmd_arg('-f', '--filename', type=str, default=os.getcwd())
+@app.cmd_arg('filename', type=str)
 @app.cmd_arg('-d', '--destination', type=str, help="s3|glacier", default=DEFAULT_DESTINATION)
 @app.cmd_arg('-p', '--profile', type=str, default="default", help="profile name (default by default)")
 def rotate_backups(filename, destination=DEFAULT_DESTINATION, profile="default", **kwargs):
@@ -193,7 +193,7 @@ def rotate_backups(filename, destination=DEFAULT_DESTINATION, profile="default",
     return deleted
 
 @app.cmd(help="Backup a file or a directory, backup the current directory if no arg is provided.")
-@app.cmd_arg('-f', '--filename', type=str, default=os.getcwd())
+@app.cmd_arg('filename', type=str, default=os.getcwd(), nargs="?")
 @app.cmd_arg('-d', '--destination', type=str, help="s3|glacier", default=DEFAULT_DESTINATION)
 @app.cmd_arg('--prompt', type=str, help="yes|no", default="yes")
 @app.cmd_arg('-t', '--tags', type=str, help="space separated tags", default="")
@@ -317,10 +317,10 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
 
 
 @app.cmd(help="Give informations about stored filename, current directory if no arg is provided.")
-@app.cmd_arg('-f', '--filename', type=str, default=os.getcwd())
+@app.cmd_arg('filename', type=str, default=os.getcwd(), nargs="?")
 @app.cmd_arg('-d', '--destination', type=str, help="s3|glacier")
 @app.cmd_arg('-p', '--profile', type=str, default="default", help="profile name (default by default)")
-def info(filename, destination=None, profile="default", **kwargs):
+def info(filename=os.getcwd(), destination=None, profile="default", **kwargs):
     conf = kwargs.get("conf", None)
     storage_backend = _get_store_backend(conf, destination, profile)
     filename = filename.split("/")[-1]
@@ -336,7 +336,7 @@ def info(filename, destination=None, profile="default", **kwargs):
 
 
 @app.cmd(help="Show backups list.")
-@app.cmd_arg('-q', '--query', type=str, default="", help="search filename for query")
+@app.cmd_arg('query', type=str, default="", help="search filename for query", nargs="?")
 @app.cmd_arg('-d', '--destination', type=str, default="", help="glacier|s3, default both")
 @app.cmd_arg('-t', '--tags', type=str, default="", help="tags space separated")
 @app.cmd_arg('-p', '--profile', type=str, default="", help="profile name (all profiles are displayed by default)")
@@ -421,10 +421,10 @@ def configure_backups_rotation(profile="default"):
 
 
 @app.cmd(help="Restore backup in the current directory.")
-@app.cmd_arg('-f', '--filename', type=str, default="")
+@app.cmd_arg('filename', type=str)
 @app.cmd_arg('-d', '--destination', type=str, help="s3|glacier", default=DEFAULT_DESTINATION)
 @app.cmd_arg('-p', '--profile', type=str, default="default", help="profile name (default by default)")
-def restore(filename=os.getcwd(), destination=DEFAULT_DESTINATION, profile="default", **kwargs):
+def restore(filename, destination=DEFAULT_DESTINATION, profile="default", **kwargs):
     """Restore backup in the current working directory.
 
     :type filename: str
@@ -495,7 +495,7 @@ def restore(filename=os.getcwd(), destination=DEFAULT_DESTINATION, profile="defa
 
 
 @app.cmd(help="Delete a backup.")
-@app.cmd_arg('-f', '--filename', type=str, default="")
+@app.cmd_arg('filename', type=str)
 @app.cmd_arg('-d', '--destination', type=str, help="s3|glacier", default=DEFAULT_DESTINATION)
 @app.cmd_arg('-p', '--profile', type=str, default="default", help="profile name (default by default)")
 def delete(filename, destination=DEFAULT_DESTINATION, profile="default", **kwargs):
