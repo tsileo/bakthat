@@ -30,7 +30,7 @@ from bakthat.utils import (dump_truck_delete_backup,
                             _timedelta_total_seconds,
                             _interval_string_to_seconds)
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 
 app = aaargh.App(description="Compress, encrypt and upload files directly to Amazon S3/Glacier.")
 
@@ -159,7 +159,7 @@ def rotate_backups(filename, destination=DEFAULT_DESTINATION, profile="default",
     """
     conf = kwargs.get("conf", None)
     storage_backend = _get_store_backend(conf, destination, profile)
-    rotate = RotationConfig(kwargs, profile)
+    rotate = RotationConfig(conf, profile)
     if not rotate:
         raise Exception("You must run bakthat configure_backups_rotation or provide rotation configuration.")
 
@@ -192,6 +192,7 @@ def rotate_backups(filename, destination=DEFAULT_DESTINATION, profile="default",
 
     return deleted
 
+
 @app.cmd(help="Backup a file or a directory, backup the current directory if no arg is provided.")
 @app.cmd_arg('filename', type=str, default=os.getcwd(), nargs="?")
 @app.cmd_arg('-d', '--destination', type=str, help="s3|glacier", default=DEFAULT_DESTINATION)
@@ -203,7 +204,7 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
 
     :type filename: str
     :param filename: File/directory to backup.
-            
+
     :type destination: str
     :param destination: s3|glacier
 
@@ -234,7 +235,7 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
     now = datetime.utcnow()
     date_component = now.strftime("%Y%m%d%H%M%S")
     stored_filename = backup_file_fmt.format(arcname, date_component)
-    
+
     backup_data = dict(filename=arcname, 
                     backup_date=int(now.strftime("%s")),
                     backend=destination,
@@ -249,15 +250,15 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
                 log.error("Password confirmation doesn't match")
                 return
 
-
     # Check if the file is not already compressed
     if mimetypes.guess_type(arcname) == ('application/x-tar', 'gzip'):
         log.info("File already compressed")
         outname = filename
 
+        # removing extension to reformat filename
         new_arcname = re.sub(r'(\.t(ar\.)?gz)', '', arcname)
         stored_filename = backup_file_fmt.format(new_arcname, date_component)
-        
+
         with open(outname) as outfile:
             backup_data["size"] = os.fstat(outfile.fileno()).st_size
 
@@ -312,7 +313,7 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
 
     # Insert backup metadata in SQLite
     dump_truck_insert_backup(backup_data)
-        
+
     return backup_data
 
 
@@ -354,8 +355,10 @@ def _display_backups(backups):
         backup["backup_date"] = datetime.fromtimestamp(float(backup["backup_date"])).isoformat()
         backup["size"] = bytefmt(backup["size"])
         backup["tags"] = u", ".join(backup["tags"])
+        if backup["tags"]:
+            backup["tags"] = "({0})".format(backup["tags"])
 
-        log.info("{backup_date}\t{backend}\t{size}\t{stored_filename}\t{tags}".format(**backup))
+        log.info("{backup_date}\t{backend:8}\t{size:8}\t{stored_filename} {tags}".format(**backup))
 
 @app.cmd(help="Set AWS S3/Glacier credentials.")
 @app.cmd_arg('-p', '--profile', type=str, default="default", help="profile name (default by default)")
@@ -472,7 +475,6 @@ def restore(filename, destination=DEFAULT_DESTINATION, profile="default", **kwar
         log.info("Job Check: " + repr(download_kwargs))
 
     out = storage_backend.download(key_name, **download_kwargs)
-
     if kwargs.get("job_check"):
         log.info("Job Check Request")
         # If it's a job_check call, we return Glacier job data

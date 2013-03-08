@@ -4,18 +4,18 @@ import os
 import logging
 import shelve
 import json
-import re
 import socket
 import httplib
-import ConfigParser
 import boto
 from boto.s3.key import Key
+import math
 from boto.glacier.exceptions import UnexpectedHTTPResponseError
 from boto.exception import S3ResponseError
 
-from bakthat.conf import config, dump_truck, DEFAULT_DESTINATION, DEFAULT_LOCATION, CONFIG_FILE
+from bakthat.conf import config, dump_truck, DEFAULT_LOCATION, CONFIG_FILE
 
 log = logging.getLogger(__name__)
+
 
 class glacier_shelve(object):
     """Context manager for shelve.
@@ -32,9 +32,20 @@ class glacier_shelve(object):
     def __exit__(self, exc_type, exc_value, traceback):
         self.shelve.close()
 
+
 class BakthatBackend:
-    """Handle Configuration for Backends."""
-    def __init__(self, conf=None, profile="default", **kwargs):
+    """Handle Configuration for Backends.
+
+    The profile is only useful when no conf is None.
+
+    :type conf: dict
+    :param conf: Custom configuration
+
+    :type profile: str
+    :param profile: Profile name
+
+    """
+    def __init__(self, conf={}, profile="default"):
         self.conf = conf
         if not conf:
             self.conf = config.get(profile)
@@ -43,16 +54,18 @@ class BakthatBackend:
             if not "access_key" in self.conf or not "secret_key" in self.conf:
                 log.error("Missing access_key/secret_key in {0} profile ({1}).".format(profile, CONFIG_FILE))
 
+
 class RotationConfig(BakthatBackend):
     """Hold backups rotation configuration."""
-    def __init__(self, conf=None, profile="default"):
+    def __init__(self, conf={}, profile="default"):
         BakthatBackend.__init__(self, conf, profile)
-        self.conf = self.conf.get("rotation")
+        self.conf = self.conf.get("rotation", {})
+
 
 class S3Backend(BakthatBackend):
     """Backend to handle S3 upload/download."""
-    def __init__(self, conf=None, profile="default"):
-        BakthatBackend.__init__(self, conf)
+    def __init__(self, conf={}, profile="default"):
+        BakthatBackend.__init__(self, conf, profile)
 
         con = boto.connect_s3(self.conf["access_key"], self.conf["secret_key"])
 
@@ -78,7 +91,7 @@ class S3Backend(BakthatBackend):
         encrypted_out = tempfile.TemporaryFile()
         k.get_contents_to_file(encrypted_out)
         encrypted_out.seek(0)
-        
+
         return encrypted_out
 
     def cb(self, complete, total):
@@ -106,12 +119,10 @@ class S3Backend(BakthatBackend):
 
 class GlacierBackend(BakthatBackend):
     """Backend to handle Glacier upload/download."""
-    def __init__(self, conf=None, profile="default"):
+    def __init__(self, conf={}, profile="default"):
         BakthatBackend.__init__(self, conf, profile)
 
-        con = boto.connect_glacier(aws_access_key_id=self.conf["access_key"],
-                                    aws_secret_access_key=self.conf["secret_key"],
-                                    region_name=self.conf["region_name"])
+        con = boto.connect_glacier(aws_access_key_id=self.conf["access_key"], aws_secret_access_key=self.conf["secret_key"], region_name=self.conf["region_name"])
 
         self.vault = con.create_vault(self.conf["glacier_vault"])
         self.backup_key = "bakthat_glacier_inventory"
@@ -143,6 +154,7 @@ class GlacierBackend(BakthatBackend):
 
             return json.loads(k.get_contents_as_string())
         except S3ResponseError, exc:
+            log.error(exc)
             return {}
 
 #    def restore_inventory(self):
@@ -168,13 +180,12 @@ class GlacierBackend(BakthatBackend):
         else:
             raise Exception("You must set s3_bucket in order to backup/restore inventory to/from S3.")
 
-
     def upload(self, keyname, filename):
         archive_id = self.vault.concurrent_create_archive_from_file(filename, keyname)
 
         dump_truck.upsert({"filename": keyname, "archive_id": archive_id}, "inventory")
 
-        self.backup_inventory()
+        #self.backup_inventory()
 
     def get_archive_id(self, filename):
         """Get the archive_id corresponding to the filename."""
@@ -189,10 +200,10 @@ class GlacierBackend(BakthatBackend):
         :param filename: Stored filename.
 
         """
-        res = dump_truck.execute('SELECT job_id FROM jobs WHERE filename == "{0}"'.format(filename))
+        res = dump_truck.execute('SELECT job_id FROM jobs WHERE filename LIKE "{0}%"'.format(filename))
         if res:
             return res[0].get("job_id")
-    
+
     def delete_job(self, filename):
         """Delete the job entry for the filename.
 
@@ -206,22 +217,25 @@ class GlacierBackend(BakthatBackend):
         """Initiate a Job, check its status, and download the archive if it's completed."""
         archive_id = self.get_archive_id(keyname)
         if not archive_id:
+            log.error("{0} not found !")
+            # check if the file exist on S3 ?
             return
-        
+
         job = None
 
         job_id = self.get_job_id(keyname)
+        log.debug("Job: {0}".format(job_id))
 
         if job_id:
             try:
                 job = self.vault.get_job(job_id)
-            except UnexpectedHTTPResponseError: # Return a 404 if the job is no more available
+            except UnexpectedHTTPResponseError:  # Return a 404 if the job is no more available
                 self.delete_job(keyname)
 
         if not job:
             job = self.vault.retrieve_archive(archive_id)
             job_id = job.id
-            dump_truck.upsert({"filename": keyname, "job_id": job_id}, "inventory")
+            dump_truck.upsert({"filename": keyname, "job_id": job_id}, "jobs")
 
         log.info("Job {action}: {status_code} ({creation_date}/{completion_date})".format(**job.__dict__))
 
@@ -232,11 +246,9 @@ class GlacierBackend(BakthatBackend):
             # Boto related, download the file in chunk
             chunk_size = 4 * 1024 * 1024
             num_chunks = int(math.ceil(job.archive_size / float(chunk_size)))
-            job._download_to_fileob(encrypted_out, num_chunks, chunk_size,
-                                     True, (socket.error, httplib.IncompleteRead))
+            job._download_to_fileob(encrypted_out, num_chunks, chunk_size, True, (socket.error, httplib.IncompleteRead))
 
             encrypted_out.seek(0)
-
             return encrypted_out
         else:
             log.info("Not completed yet")
@@ -257,7 +269,6 @@ class GlacierBackend(BakthatBackend):
             return self.vault.retrieve_archive(archive_id, sns_topic=None, description='Retrieval job')
         else:
             return self.vault.get_job(jobid)
-
 
     def ls(self):
         return [ivt.get("filename") for ivt in dump_truck.dump("inventory")]
@@ -283,7 +294,6 @@ class GlacierBackend(BakthatBackend):
             with glacier_shelve() as d:
                 archives = d["archives"]
                 if "archives" in d:
-                    print archives
                     for key, archive_id in archives.items():
                         #print {"filename": key, "archive_id": archive_id}
                         dump_truck.upsert({"filename": key, "archive_id": archive_id}, "inventory")

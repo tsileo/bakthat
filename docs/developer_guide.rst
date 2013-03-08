@@ -1,4 +1,4 @@
-.. _developer_guide:
+.. _developer-guide:
 
 Developer's Guide
 =================
@@ -82,7 +82,17 @@ You can also use it like a normal class:
 
     from bakthat.helper import BakHelper
 
-    bh = BakHelper()
+    bakthat_conf = {'access_key': 'YOURACCESSKEY',
+                    'secret_key': 'YOURSECRETKEY',
+                    'glacier_vault': 'yourvault',
+                    's3_bucket': 'yours3bucket',
+                    'region_name': 'eu-west-1',
+                    'rotation': {'days': 7,
+                                'first_week_day': 5,
+                                'months': 6,
+                                'weeks': 6}}
+
+    bh = BakHelper(conf=bakthat_conf)
     with open("myfile.txt", "w") as f:
         f.write("mydata")
     bh.backup("myfile.txt")

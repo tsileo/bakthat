@@ -1,11 +1,8 @@
 # -*- encoding: utf-8 -*-
 import logging
-import hashlib
-import bakthat
 import socket
-from bakthat.conf import (config, dump_truck,
-                        DEFAULT_DESTINATION, DEFAULT_LOCATION)
-from bakthat.utils import dump_truck_backups_generator, dump_truck_upsert_backup
+from bakthat.conf import config, dump_truck, DEFAULT_DESTINATION, DEFAULT_LOCATION
+from bakthat.utils import dump_truck_upsert_backup
 from bakthat.backends import BakthatBackend
 
 try:
@@ -22,7 +19,7 @@ class BakSyncer(BakthatBackend):
 
     No sensitive information is transmitted except (you should be using https):
     - API user/password
-    - a hash (hashlib.sha512) of your access_key concatened with 
+    - a hash (hashlib.sha512) of your access_key concatened with
         your s3_bucket or glacier_vault, to be able to sync multiple
         client with the same configuration stored as metadata for each bakckupyy.
 
@@ -42,9 +39,7 @@ class BakSyncer(BakthatBackend):
         if self.auth:
             self.request_kwargs["auth"] = self.auth
 
-        self.request_kwargs["headers"] = {'content-type': 'application/json',
-                                        'bakthat-client': socket.gethostname()}
-
+        self.request_kwargs["headers"] = {'content-type': 'application/json', 'bakthat-client': socket.gethostname()}
 
         self.get_resource = lambda x: self.api_url + "/{0}".format(x)
 
@@ -68,10 +63,10 @@ class BakSyncer(BakthatBackend):
         Synchronize Bakthat sqlite database via a HTTP POST request.
 
         Backups are never really deleted from sqlite database, we just update the is_deleted key.
-        
+
         It sends the last server sync timestamp along with data updated since last sync.
         Then the server return backups that have been updated on the server since last sync.
-        
+
         Both side (bakthat and the sync server) make upserts of the latest data avaible:
         - if it doesn't exist yet, it will be created.
         - if it has been modified (e.g deleted, since it's the only action we can take) we update it.
@@ -79,7 +74,7 @@ class BakSyncer(BakthatBackend):
         log.debug("Start syncing")
 
         self.register()
-        
+
         last_sync_ts = dump_truck.get_var("sync_ts")
         to_insert_in_mongo = dump_truck.execute("SELECT * FROM backups WHERE last_updated > {0:d}".format(last_sync_ts))
         data = dict(sync_ts=last_sync_ts, to_insert_in_mongo=to_insert_in_mongo)

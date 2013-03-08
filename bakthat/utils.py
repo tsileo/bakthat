@@ -37,7 +37,7 @@ def dump_truck_get_backup(filename, destination="", profile="default"):
     query = _get_query(destination=destination, stored_filename=filename)
     profile_query = _get_profile_query(profile)
     query = "SELECT stored_filename FROM backups \
-            WHERE {0} AND {1} ORDER BY last_updated DESC LIMIT 0, 1".format(query, profile_query)
+            WHERE {0} AND {1} ORDER BY backup_date DESC LIMIT 0, 1".format(query, profile_query)
     print query
     backups = dump_truck.execute(query)
     if backups:
@@ -95,7 +95,7 @@ def _get_destination_query(destination):
 
 def _get_stored_filename_query(stored_filename):
     if stored_filename:
-        return " (stored_filename == '{0}' OR filename == '{0}')".format(stored_filename)
+        return " (stored_filename LIKE '{0}%' OR filename LIKE '{0}%')".format(stored_filename)
     return ""
 
 def _get_is_deleted_query(is_deleted):

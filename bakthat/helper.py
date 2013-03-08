@@ -1,20 +1,19 @@
 # -*- encoding: utf-8 -*-
 import logging
-import json
 import tempfile
 import sh
 import os
 import shutil
 
 import bakthat
-from bakthat.conf import config, DEFAULT_DESTINATION, DEFAULT_LOCATION
+from bakthat.conf import DEFAULT_DESTINATION
 
 log = logging.getLogger(__name__)
 
 
 class BakHelper:
     """Helper that makes building scripts with bakthat better faster stronger.
-    
+
     Designed to be used as a context manager.
 
     :type dir_prefix: str
@@ -22,12 +21,15 @@ class BakHelper:
 
     :type destination: str
     :keyword destination: Destination (glacier|s3)
-    
+
     :type password: str
     :keyword password: Password (Empty string to disable encryption, disabled by default)
 
     :type profile: str
-    :keyword profile: Profile name
+    :keyword profile: Profile name, only valid if no custom conf is provided
+
+    :type conf: dict
+    :keyword conf: Override profiles configuration
 
     :type tags: list
     :param tags: List of tags
@@ -37,6 +39,7 @@ class BakHelper:
         self.destination = kwargs.get("destination", DEFAULT_DESTINATION)
         self.password = kwargs.get("password", "")
         self.profile = kwargs.get("profile", "default")
+        self.conf = kwargs.get("conf", {})
         self.tags = kwargs.get("tags", [])
         self.syncer = None
 
@@ -48,7 +51,7 @@ class BakHelper:
         self.old_cwd = os.getcwd()
         self.tmpd = tempfile.mkdtemp(prefix=self.dir_prefix)
         sh.cd(self.tmpd)
-        log.debug("New current working directory: {0}.".format(self.tmpd))
+        log.info("New current working directory: {0}.".format(self.tmpd))
         return self
 
     def __exit__(self, type, value, traceback):
@@ -56,6 +59,7 @@ class BakHelper:
             and run synchronization if enabled.
         """
         sh.cd(self.old_cwd)
+        log.info("Back to {0}".format(self.old_cwd))
         shutil.rmtree(self.tmpd)
         if self.syncer:
             log.debug("auto sync")
@@ -74,7 +78,7 @@ class BakHelper:
 
         :type api_url: str
         :param api_url: Base API URL.
-        
+
         :type auth: tuple
         :param auth: Optional, tuple/list (username, password) for API authentication.
         """
@@ -87,10 +91,10 @@ class BakHelper:
 
         :type filename: str
         :param filename: File/directory to backup.
-        
+
         :type password: str
         :keyword password: Override already set password.
-        
+
         :type destination: str
         :keyword destination: Override already set destination.
 
@@ -100,6 +104,9 @@ class BakHelper:
         :type profile: str
         :keyword profile: Profile name
 
+        :type conf: dict
+        :keyword conf: Override profiles configuration
+
         :rtype: dict
         :return: A dict containing the following keys: stored_filename, size, metadata and filename.
         """
@@ -107,25 +114,29 @@ class BakHelper:
             filename = self.tmpd
 
         return bakthat.backup(filename,
-                                destination=kwargs.get("destination", self.destination),
-                                password=kwargs.get("password", self.password),
-                                tags=kwargs.get("tags", self.tags),
-                                profile=kwargs.get("profile", self.profile))
+                            destination=kwargs.get("destination", self.destination),
+                            password=kwargs.get("password", self.password),
+                            tags=kwargs.get("tags", self.tags),
+                            profile=kwargs.get("profile", self.profile),
+                            conf=kwargs.get("conf", self.conf))
 
     def restore(self, filename, **kwargs):
         """Restore backup in the current working directory.
 
         :type filename: str
         :param filename: File/directory to backup.
-        
+
         :type password: str
         :keyword password: Override already set password.
-        
+
         :type destination: str
         :keyword destination: Override already set destination.
 
         :type profile: str
         :keyword profile: Profile name
+
+        :type conf: dict
+        :keyword conf: Override profiles configuration
 
         :rtype: bool
         :return: True if successful.
@@ -133,7 +144,8 @@ class BakHelper:
         return bakthat.restore(filename,
                                 destination=kwargs.get("destination", self.destination),
                                 password=kwargs.get("password", self.password),
-                                profile=kwargs.get("profile", self.profile))
+                                profile=kwargs.get("profile", self.profile),
+                                conf=kwargs.get("conf", self.conf))
 
     def delete_older_than(self, filename=None, interval=None, **kwargs):
         """Delete backups older than the given interval string.
@@ -142,14 +154,17 @@ class BakHelper:
         :param filename: File/directory name.
 
         :type interval: str
-        :param interval: Interval string like 1M, 1W, 1M3W4h2s... 
+        :param interval: Interval string like 1M, 1W, 1M3W4h2s...
             (s => seconds, m => minutes, h => hours, D => days, W => weeks, M => months, Y => Years).
 
         :type destination: str
         :keyword destination: Override already set destination.
-        
+
         :type profile: str
         :keyword profile: Profile name
+
+        :type conf: dict
+        :keyword conf: Override profiles configuration
 
         :rtype: list
         :return: A list containing the deleted keys (S3) or archives (Glacier).
@@ -159,7 +174,8 @@ class BakHelper:
 
         return bakthat.delete_older_than(filename, interval,
                                         destination=kwargs.get("destination", self.destination),
-                                        profile=kwargs.get("profile", self.profile))
+                                        profile=kwargs.get("profile", self.profile),
+                                        conf=kwargs.get("conf", self.conf))
 
     def rotate(self, filename=None, **kwargs):
         """Rotate backup using grandfather-father-son rotation scheme.
@@ -169,9 +185,12 @@ class BakHelper:
 
         :type destination: str
         :keyword destination: Override already set destination.
-             
+
         :type profile: str
         :keyword profile: Profile name
+
+        :type conf: dict
+        :keyword conf: Override profiles configuration
 
         :rtype: list
         :return: A list containing the deleted keys (S3) or archives (Glacier).
@@ -180,5 +199,6 @@ class BakHelper:
             filename = self.tmpd
 
         return bakthat.rotate_backups(filename,
-                                        destination=kwargs.pop("destination", self.destination),
-                                        profile=kwargs.get("profile", self.profile))
+                                    destination=kwargs.pop("destination", self.destination),
+                                    profile=kwargs.get("profile", self.profile),
+                                    conf=kwargs.get("conf", self.conf))

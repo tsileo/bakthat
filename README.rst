@@ -21,6 +21,9 @@ Check out `the documentation to get started <http://docs.bakthat.io>`_.
 Overview
 --------
 
+Bakthat command line tool
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
 ::
 
     $ pip install bakthat
@@ -55,10 +58,42 @@ Overview
     $ bakthat delete mydir.20130305193615.tgz.enc
     Deleting mydir.20130305193615.tgz.enc
 
+Bakthat Python API
+~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+    import logging
+    import sh
+    logging.basicConfig(level=logging.INFO)
+
+    from bakthat.helper import BakHelper
+
+    BACKUP_NAME = "myhost_mysql"
+    BACKUP_PASSWORD = "mypassword"
+    MYSQL_USER = "root"
+    MYSQL_PASSWORD = "mypassword"
+
+    with BakHelper(BACKUP_NAME, password=BACKUP_PASSWORD, tags=["mysql"]) as bh:
+        sh.mysqldump("-p{0}".format(MYSQL_PASSWORD),
+                    u=MYSQL_USER,
+                    all_databases=True,
+                    _out="dump.sql")
+        bh.backup()
+        bh.rotate()
 
 
 Changelog
 ---------
+
+0.4.1
+~~~~~
+
+**Mars 8 2013**
+
+- small bugfix when restoring from glacier
+- bakhelper now support custom configuration and profiles
+- aligned date in show command
 
 0.4.0
 ~~~~~

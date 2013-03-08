@@ -208,6 +208,11 @@ Now you can rotate a backup set:
 
     $ bakthat rotate_backups bakname
 
+Accessing bakthat Python API
+----------------------------
+
+Check out the :ref:`developer-guide`.
+
 
 Configuration
 -------------
