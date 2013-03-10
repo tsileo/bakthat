@@ -9,7 +9,7 @@ Here are some features:
 * Compress with `tarfile <http://docs.python.org/library/tarfile.html>`_
 * Encrypt with `beefish <http://pypi.python.org/pypi/beefish>`_ (**optional**)
 * Upload/download to S3 or Glacier with `boto <http://pypi.python.org/pypi/boto>`_
-* Local backups inventory stored in a SQLite database with `DumpTruck <http://www.dumptruck.io/>`_
+* Local backups inventory stored in a SQLite database with `peewee <http://peewee.readthedocs.org/>`_
 * Delete older than, and `Grandfather-father-son backup rotation <http://en.wikipedia.org/wiki/Backup_rotation_scheme#Grandfather-father-son>`_ supported
 * Possibility to sync backups database between multiple clients via a centralized server
 
@@ -85,6 +85,14 @@ Bakthat Python API
 
 Changelog
 ---------
+
+0.4.2
+~~~~~
+
+**Mars 10 2013**
+
+- Using `peewee <http://peewee.readthedocs.org/>`_ instead of dumptruck, should be Python2.6 compatible again.
+
 
 0.4.1
 ~~~~~

@@ -1,9 +1,8 @@
 # -*- encoding: utf-8 -*-
 import logging
 import socket
-from bakthat.conf import config, dump_truck, DEFAULT_DESTINATION, DEFAULT_LOCATION
-from bakthat.utils import dump_truck_upsert_backup
 from bakthat.backends import BakthatBackend
+from bakthat.models import Backups, Config
 
 try:
     import requests
@@ -45,17 +44,17 @@ class BakSyncer(BakthatBackend):
 
     def register(self):
         """Register/create the current host on the remote server if not already registered."""
-        if not dump_truck.get_var("client_id"):
+        if not Config.get_key("client_id"):
             r_kwargs = self.request_kwargs.copy()
             r = requests.post(self.get_resource("clients"), **r_kwargs)
             if r.status_code == 200:
                 client = r.json()
                 if client:
-                    dump_truck.save_var("client_id", client["_id"])
+                    Config.set_key("client_id", client["_id"])
             else:
                 log.error("An error occured during sync: {0}".format(r.text))
         else:
-            log.debug("Already registered ({0})".format(dump_truck.get_var("client_id")))
+            log.debug("Already registered ({0})".format(Config.get_key("client_id")))
 
     def sync(self):
         """Draft for implementing bakthat clients (hosts) backups data synchronization.
@@ -75,8 +74,8 @@ class BakSyncer(BakthatBackend):
 
         self.register()
 
-        last_sync_ts = dump_truck.get_var("sync_ts")
-        to_insert_in_mongo = dump_truck.execute("SELECT * FROM backups WHERE last_updated > {0:d}".format(last_sync_ts))
+        last_sync_ts = Config.get_key("sync_ts", 0)
+        to_insert_in_mongo = [b._data for b in Backups.search(last_updated_gt=last_sync_ts)]
         data = dict(sync_ts=last_sync_ts, to_insert_in_mongo=to_insert_in_mongo)
         r_kwargs = self.request_kwargs.copy()
         log.debug("Initial payload: {0}".format(data))
@@ -91,8 +90,8 @@ class BakSyncer(BakthatBackend):
         sync_ts = r.json().get("sync_ts")
         for newbackup in to_insert_in_bakthat:
             log.debug("Upsert {0}".format(newbackup))
-            dump_truck_upsert_backup(newbackup)
+            Backups.upsert(**newbackup)
 
-        dump_truck.save_var("sync_ts", sync_ts)
+        Config.set_key("sync_ts", sync_ts)
 
         log.debug("Sync succcesful")

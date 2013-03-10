@@ -290,7 +290,7 @@ Once your profile is configured, you can use it with **--profile**/**-p** argume
 Stored metadata
 ---------------
 
-Batkthat stores some data about your backups in a SQLite database (using `DumpTruck <http://www.dumptruck.io/>`_ as wrapper) for few reasons:
+Batkthat stores some data about your backups in a SQLite database (using `peewee <http://peewee.readthedocs.org/>`_ as wrapper) for few reasons:
 
 - to allow you to filter them efficiently.
 - to avoid making a lot of requests to AWS.

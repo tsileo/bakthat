@@ -129,10 +129,4 @@ Here is a MySQL backup script, it makes use of `sh <http://amoffat.github.com/sh
 Accessing bakthat SQLite database
 ---------------------------------
 
-Since bakthat stores custom backups metadata (see :ref:`stored-metadata`), you can execute custom SQL query with bakthat `DumpTruck <http://www.dumptruck.io/>`_ instance.
-
-.. code-block:: python
-
-    from bakthat.conf import dump_truck
-    dump_truck.execute("SELECT * FROM backups")
-
+Since bakthat stores custom backups metadata (see :ref:`stored-metadata`), you can execute custom SQL query.

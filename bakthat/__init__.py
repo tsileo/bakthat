@@ -2,9 +2,7 @@
 import tarfile
 import tempfile
 import os
-import sys
-import ConfigParser
-from datetime import datetime, timedelta
+from datetime import datetime
 from getpass import getpass
 import logging
 import hashlib
@@ -12,25 +10,20 @@ import json
 import re
 import mimetypes
 import calendar
-from contextlib import closing # for Python2.6 compatibility
+from contextlib import closing  # for Python2.6 compatibility
 
 import yaml
-import boto
 from beefish import decrypt, encrypt_file
 import aaargh
 import grandfatherson
 from byteformat import ByteFormatter
 
 from bakthat.backends import GlacierBackend, S3Backend, RotationConfig
-from bakthat.conf import config, dump_truck, DEFAULT_DESTINATION, DEFAULT_LOCATION, CONFIG_FILE
-from bakthat.utils import (dump_truck_delete_backup,
-                            dump_truck_insert_backup,
-                            dump_truck_get_backup,
-                            _get_query,
-                            _timedelta_total_seconds,
-                            _interval_string_to_seconds)
+from bakthat.conf import config, DEFAULT_DESTINATION, DEFAULT_LOCATION, CONFIG_FILE
+from bakthat.utils import _interval_string_to_seconds
+from bakthat.models import Backups, Inventory
 
-__version__ = "0.4.1"
+__version__ = "0.4.2"
 
 app = aaargh.App(description="Compress, encrypt and upload files directly to Amazon S3/Glacier.")
 
@@ -40,6 +33,7 @@ if not log.handlers:
     logging.basicConfig(level=logging.INFO, format='%(message)s')
 
 STORAGE_BACKEND = dict(s3=S3Backend, glacier=GlacierBackend)
+
 
 def _get_store_backend(conf, destination=DEFAULT_DESTINATION, profile="default"):
     if not destination:
@@ -65,7 +59,7 @@ def match_filename(filename, destination=DEFAULT_DESTINATION, conf=None, profile
 
     # old regex for backward compatibility (for files without dot before the date component).
     old_regex_key = re.compile(r"(?P<backup_name>.+)(?P<date_component>\d{14})\.tgz(?P<is_enc>\.enc)?")
-    
+
     keys = []
     for key in _keys:
         match = regex_key.match(key)
@@ -73,7 +67,7 @@ def match_filename(filename, destination=DEFAULT_DESTINATION, conf=None, profile
         # Backward compatibility
         if not match:
             match = old_regex_key.match(key)
-        
+
         if match:
             keys.append(dict(filename=match.group("backup_name"),
                         key=key,
@@ -94,7 +88,7 @@ def delete_older_than(filename, interval, destination=DEFAULT_DESTINATION, profi
     :param filename: File/directory name.
 
     :type interval: str
-    :param interval: Interval string like 1M, 1W, 1M3W4h2s... 
+    :param interval: Interval string like 1M, 1W, 1M3W4h2s...
         (s => seconds, m => minutes, h => hours, D => days, W => weeks, M => months, Y => Years).
 
     :type destination: str
@@ -102,7 +96,7 @@ def delete_older_than(filename, interval, destination=DEFAULT_DESTINATION, profi
 
     :type conf: dict
     :keyword conf: Override/set AWS configuration.
-        
+
     :rtype: list
     :return: A list containing the deleted keys (S3) or archives (Glacier).
 
@@ -114,16 +108,16 @@ def delete_older_than(filename, interval, destination=DEFAULT_DESTINATION, profi
     deleted = []
 
     backup_date_filter = int(datetime.utcnow().strftime("%s")) - interval_seconds
-    query = "SELECT stored_filename FROM backups WHERE backend == '{0}' \
-             AND backup_date < {1:d} AND filename LIKE '{2}%' AND is_deleted == 0"
-    for backup in dump_truck.execute(query.format(destination, backup_date_filter, filename)):
-        real_key = backup.get("stored_filename")
+    for backup in Backups.search(filename, destination, older_than=backup_date_filter, profile=profile):
+        real_key = backup.stored_filename
         log.info("Deleting {0}".format(real_key))
+
         storage_backend.delete(real_key)
-        dump_truck_delete_backup(real_key)
+        backup.set_deleted()
         deleted.append(real_key)
 
     return deleted
+
 
 @app.cmd(help="Rotate backups using Grandfather-father-son backup rotation scheme.")
 @app.cmd_arg('filename', type=str)
@@ -152,7 +146,7 @@ def rotate_backups(filename, destination=DEFAULT_DESTINATION, profile="default",
 
     :type first_week_day: str
     :keyword first_week_day: First week day (to calculate wich weekly backup keep, saturday by default).
-        
+
     :rtype: list
     :return: A list containing the deleted keys (S3) or archives (Glacier).
 
@@ -165,29 +159,25 @@ def rotate_backups(filename, destination=DEFAULT_DESTINATION, profile="default",
 
     deleted = []
 
-    query = "SELECT backup_date FROM backups WHERE backend == '{0}' \
-            AND filename LIKE '{1}%' AND is_deleted == 0".format(destination, filename)
+    backups = Backups.search(filename, destination, profile=profile)
+    backups_date = [datetime.fromtimestamp(float(backup.backup_date)) for backup in backups]
 
-    backups = dump_truck.execute(query)
-    backups_date = [datetime.fromtimestamp(float(backup["backup_date"])) for backup in backups]
+    to_delete = grandfatherson.to_delete(backups_date,
+                                         days=int(rotate.conf["days"]),
+                                         weeks=int(rotate.conf["weeks"]),
+                                         months=int(rotate.conf["months"]),
+                                         firstweekday=int(rotate.conf["first_week_day"]),
+                                         now=datetime.utcnow())
 
-    to_delete = grandfatherson.to_delete(backups_date, days=int(rotate.conf["days"]),
-                                                    weeks=int(rotate.conf["weeks"]),
-                                                    months=int(rotate.conf["months"]),
-                                                    firstweekday=int(rotate.conf["first_week_day"]),
-                                                    now=datetime.utcnow())
-    
     for delete_date in to_delete:
         backup_date = int(delete_date.strftime("%s"))
-        query = "SELECT stored_filename FROM backups WHERE backend == '{0}' \
-                AND filename LIKE '{1}%' AND backup_date == {2:d} \
-                AND is_deleted == 0".format(destination, filename, backup_date)
-        backups = dump_truck.execute(query)
-        if backups:
-            real_key = backups[0].get("stored_filename")
+        backup = Backups.search(filename, destination, backup_date=backup_date, profile=profile).get()
+        if backup:
+            real_key = backup.stored_filename
             log.info("Deleting {0}".format(real_key))
+
             storage_backend.delete(real_key)
-            dump_truck_delete_backup(real_key)
+            backup.set_deleted()
             deleted.append(real_key)
 
     return deleted
@@ -236,10 +226,12 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
     date_component = now.strftime("%Y%m%d%H%M%S")
     stored_filename = backup_file_fmt.format(arcname, date_component)
 
-    backup_data = dict(filename=arcname, 
-                    backup_date=int(now.strftime("%s")),
-                    backend=destination,
-                    is_deleted=False)
+    backup_date = int(now.strftime("%s"))
+    backup_data = dict(filename=arcname,
+                       backup_date=backup_date,
+                       last_updated=backup_date,
+                       backend=destination,
+                       is_deleted=False)
 
     password = kwargs.get("password")
     if password is None and prompt.lower() != "no":
@@ -292,15 +284,17 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
         backup_data["size"] = os.fstat(encrypted_out.fileno()).st_size
 
     # Handling tags metadata
-    if isinstance(tags, (str, unicode)):
-        tags = tags.split()
+    if isinstance(tags, list):
+        tags = " ".join(tags)
 
     backup_data["tags"] = tags
 
     backup_data["metadata"] = dict(is_enc=bakthat_encryption)
     backup_data["stored_filename"] = stored_filename
-    backup_data["backend_hash"] = hashlib.sha512(storage_backend.conf.get("access_key") + \
-                                    storage_backend.conf.get(storage_backend.container_key)).hexdigest()
+
+    access_key = storage_backend.conf.get("access_key")
+    container_key = storage_backend.conf.get(storage_backend.container_key)
+    backup_data["backend_hash"] = hashlib.sha512(access_key + container_key).hexdigest()
 
     log.info("Uploading...")
     storage_backend.upload(stored_filename, outname)
@@ -312,7 +306,7 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
     log.debug(backup_data)
 
     # Insert backup metadata in SQLite
-    dump_truck_insert_backup(backup_data)
+    Backups.create(**backup_data)
 
     return backup_data
 
@@ -331,34 +325,31 @@ def info(filename=os.getcwd(), destination=None, profile="default", **kwargs):
         key = None
     else:
         key = keys[0]
-        log.info("Last backup date: {0} ({1} versions)".format(key["backup_date"].isoformat(),
-                                                    str(len(keys))))
+        log.info("Last backup date: {0} ({1} versions)".format(key["backup_date"].isoformat(), str(len(keys))))
     return key
 
 
 @app.cmd(help="Show backups list.")
 @app.cmd_arg('query', type=str, default="", help="search filename for query", nargs="?")
-@app.cmd_arg('-d', '--destination', type=str, default="", help="glacier|s3, default both")
+@app.cmd_arg('-d', '--destination', type=str, default=DEFAULT_DESTINATION, help="glacier|s3, default both")
 @app.cmd_arg('-t', '--tags', type=str, default="", help="tags space separated")
-@app.cmd_arg('-p', '--profile', type=str, default="", help="profile name (all profiles are displayed by default)")
-def show(query="", destination=DEFAULT_DESTINATION, tags=[], profile="", help="Profile, blank to show all"):
-    query = _get_query(tags=tags, destination=destination, query=query, profile=profile)
-    if query:
-        query = "WHERE " + query
-    backups = dump_truck.execute("SELECT * FROM backups {0} ORDER BY last_updated DESC".format(query))
+@app.cmd_arg('-p', '--profile', type=str, default="default", help="profile name (all profiles are displayed by default)")
+def show(query="", destination=DEFAULT_DESTINATION, tags="", profile="default", help="Profile, blank to show all"):
+    backups = Backups.search(query, destination, profile=profile, tags=tags)
     _display_backups(backups)
 
 
 def _display_backups(backups):
     bytefmt = ByteFormatter()
     for backup in backups:
+        backup = backup._data
         backup["backup_date"] = datetime.fromtimestamp(float(backup["backup_date"])).isoformat()
         backup["size"] = bytefmt(backup["size"])
-        backup["tags"] = u", ".join(backup["tags"])
-        if backup["tags"]:
+        if backup.get("tags"):
             backup["tags"] = "({0})".format(backup["tags"])
 
         log.info("{backup_date}\t{backend:8}\t{size:8}\t{stored_filename} {tags}".format(**backup))
+
 
 @app.cmd(help="Set AWS S3/Glacier credentials.")
 @app.cmd_arg('-p', '--profile', type=str, default="default", help="profile name (default by default)")
@@ -432,7 +423,7 @@ def restore(filename, destination=DEFAULT_DESTINATION, profile="default", **kwar
 
     :type filename: str
     :param filename: File/directory to backup.
-            
+
     :type destination: str
     :param destination: s3|glacier
 
@@ -452,13 +443,13 @@ def restore(filename, destination=DEFAULT_DESTINATION, profile="default", **kwar
         log.error("No file to restore, use -f to specify one.")
         return
 
-    backup = dump_truck_get_backup(filename, destination, profile)
+    backup = Backups.match_filename(filename, destination, profile=profile)
 
     if not backup:
         log.error("No file matched.")
         return
 
-    key_name = backup.get("stored_filename")
+    key_name = backup.stored_filename
     log.info("Restoring " + key_name)
 
     # Asking password before actually download to avoid waiting
@@ -468,7 +459,7 @@ def restore(filename, destination=DEFAULT_DESTINATION, profile="default", **kwar
             password = getpass()
 
     log.info("Downloading...")
-    
+
     download_kwargs = {}
     if kwargs.get("job_check"):
         download_kwargs["job_check"] = True
@@ -523,25 +514,25 @@ def delete(filename, destination=DEFAULT_DESTINATION, profile="default", **kwarg
 
     """
     conf = kwargs.get("conf", None)
-    
+
     if not filename:
         log.error("No file to delete, use -f to specify one.")
         return
 
-    backup = dump_truck_get_backup(filename, destination, profile)
+    backup = Backups.match_filename(filename, destination, profile=profile)
+
     if not backup:
         log.error("No file matched.")
         return
 
-    key_name = backup.get("stored_filename")
+    key_name = backup.stored_filename
 
     storage_backend = _get_store_backend(conf, destination, profile)
 
     log.info("Deleting {0}".format(key_name))
 
     storage_backend.delete(key_name)
-
-    dump_truck_delete_backup(key_name)
+    backup.set_deleted()
 
     return True
 
@@ -552,7 +543,7 @@ def delete(filename, destination=DEFAULT_DESTINATION, profile="default", **kwarg
 def ls(destination=None, profile="default", **kwargs):
     conf = kwargs.get("conf", None)
     storage_backend = _get_store_backend(conf, destination, profile)
-    
+
     log.info(storage_backend.container)
 
     ls_result = storage_backend.ls()
@@ -561,6 +552,7 @@ def ls(destination=None, profile="default", **kwargs):
         log.info(filename)
 
     return ls_result
+
 
 @app.cmd(help="Show Glacier inventory from S3")
 def show_glacier_inventory(**kwargs):
@@ -608,52 +600,55 @@ def restore_glacier_inventory(**kwargs):
     glacier_backend = GlacierBackend(conf)
     glacier_backend.restore_inventory()
 
+
 @app.cmd()
-def upgrade_to_dump_truck():
-    glacier_backend = GlacierBackend()
-    glacier_backend.upgrade_to_dump_truck()
+def upgrade_from_shelve():
+    if os.path.isfile(os.path.expanduser("~/.bakthat.db")):
+        glacier_backend = GlacierBackend()
+        glacier_backend.upgrade_from_shelve()
 
-    s3_backend = S3Backend()
+        s3_backend = S3Backend()
 
-    regex_key = re.compile(r"(?P<backup_name>.+)\.(?P<date_component>\d{14})\.tgz(?P<is_enc>\.enc)?")
+        regex_key = re.compile(r"(?P<backup_name>.+)\.(?P<date_component>\d{14})\.tgz(?P<is_enc>\.enc)?")
 
-    # old regex for backward compatibility (for files without dot before the date component).
-    old_regex_key = re.compile(r"(?P<backup_name>.+)(?P<date_component>\d{14})\.tgz(?P<is_enc>\.enc)?")
-    
-    for generator, backend in [(s3_backend, "s3"), (glacier_backend, "glacier")]:
-        for key in generator.ls():
-            match = regex_key.match(key)
-            # Backward compatibility
-            if not match:
-                match = old_regex_key.match(key)
-            if match:
-                filename = match.group("backup_name")
-                is_enc = bool(match.group("is_enc"))
-                backup_date = int(datetime.strptime(match.group("date_component"), "%Y%m%d%H%M%S").strftime("%s"))
-            else:
-                filename = key
-                is_enc = False
-                backup_date = 0
-            if backend == "s3":
-                backend_hash = hashlib.sha512(s3_backend.conf.get("access_key") + \
-                                    s3_backend.conf.get(s3_backend.container_key)).hexdigest()
-            elif backend == "glacier":
-                backend_hash = hashlib.sha512(glacier_backend.conf.get("access_key") + \
-                                    glacier_backend.conf.get(glacier_backend.container_key)).hexdigest()
-            new_backup = dict(backend=backend,
-                            is_deleted=0,
-                            backup_date=backup_date,
-                            tags=[],
-                            stored_filename=key,
-                            filename=filename,
-                            last_updated=int(datetime.utcnow().strftime("%s")),
-                            metadata=dict(is_enc=is_enc),
-                            size=0,
-                            backend_hash=backend_hash)
-            try:
-                dump_truck_insert_backup(new_backup)
-            except:
-                pass
+        # old regex for backward compatibility (for files without dot before the date component).
+        old_regex_key = re.compile(r"(?P<backup_name>.+)(?P<date_component>\d{14})\.tgz(?P<is_enc>\.enc)?")
+
+        for generator, backend in [(s3_backend.ls(), "s3"), ([ivt.filename for ivt in Inventory.select()], "glacier")]:
+            for key in generator:
+                match = regex_key.match(key)
+                # Backward compatibility
+                if not match:
+                    match = old_regex_key.match(key)
+                if match:
+                    filename = match.group("backup_name")
+                    is_enc = bool(match.group("is_enc"))
+                    backup_date = int(datetime.strptime(match.group("date_component"), "%Y%m%d%H%M%S").strftime("%s"))
+                else:
+                    filename = key
+                    is_enc = False
+                    backup_date = 0
+                if backend == "s3":
+                    backend_hash = hashlib.sha512(s3_backend.conf.get("access_key") + \
+                                        s3_backend.conf.get(s3_backend.container_key)).hexdigest()
+                elif backend == "glacier":
+                    backend_hash = hashlib.sha512(glacier_backend.conf.get("access_key") + \
+                                        glacier_backend.conf.get(glacier_backend.container_key)).hexdigest()
+                new_backup = dict(backend=backend,
+                                  is_deleted=0,
+                                  backup_date=backup_date,
+                                  tags="",
+                                  stored_filename=key,
+                                  filename=filename,
+                                  last_updated=int(datetime.utcnow().strftime("%s")),
+                                  metadata=dict(is_enc=is_enc),
+                                  size=0,
+                                  backend_hash=backend_hash)
+                try:
+                    Backups.upsert(**new_backup)
+                except Exception, exc:
+                    print exc
+        os.remove(os.path.expanduser("~/.bakthat.db"))
 
 
 def main():

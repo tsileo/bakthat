@@ -1,24 +1,22 @@
 import os
-import sys
 from setuptools import setup, find_packages
+
 
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 setup(
-    name = "bakthat",
-    version = "0.4.1",
-    author = "Thomas Sileo",
-    author_email = "thomas.sileo@gmail.com",
-    description = "Bakthat is a MIT licensed backup framework written in Python, it's both a command line tool and a Python module that helps you manage backups on Amazon S3/Glacier. It automatically compress, encrypt (symmetric encryption) and upload your files.",
-    license = "MIT",
-    keywords = "aws s3 glacier backup restore archive",
-    url = "http://docs.bakthat.io",
+    name="bakthat",
+    version="0.4.2",
+    author="Thomas Sileo",
+    author_email="thomas.sileo@gmail.com",
+    description="Bakthat is a MIT licensed backup framework written in Python, it's both a command line tool and a Python module that helps you manage backups on Amazon S3/Glacier. It automatically compress, encrypt (symmetric encryption) and upload your files.",
+    license="MIT",
+    keywords="aws s3 glacier backup restore archive",
+    url="http://docs.bakthat.io",
     packages=find_packages(exclude=['ez_setup', 'tests', 'tests.*']),
-    long_description= read('README.rst'),
-    install_requires=[
-        "aaargh", "boto", "pycrypto", "beefish", "grandfatherson", "dumptruck", "byteformat", "pyyaml", "sh"
-        ],
+    long_description=read('README.rst'),
+    install_requires=["aaargh", "boto", "pycrypto", "beefish", "grandfatherson", "peewee", "byteformat", "pyyaml", "sh"],
     entry_points={'console_scripts': ["bakthat = bakthat:main"]},
     classifiers=[
         "Development Status :: 4 - Beta",

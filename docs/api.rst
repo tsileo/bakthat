@@ -101,18 +101,24 @@ BakSyncer
 Utils
 -----
 
-.. autofunction:: bakthat.utils.dump_truck_delete_backup
-
-.. autofunction:: bakthat.utils.prepare_backup
-
-.. autofunction:: bakthat.utils.dump_truck_insert_backup
-
-.. autofunction:: bakthat.utils.dump_truck_upsert_backup
-
-.. autofunction:: bakthat.utils.dump_truck_backups_generator
-
-.. autofunction:: bakthat.utils._get_query
-
 .. autofunction:: bakthat.utils._timedelta_total_seconds
 
 .. autofunction:: bakthat.utils._interval_string_to_seconds
+
+Models
+------
+
+.. autoclass:: bakthat.models.Backups
+   :members:
+
+
+.. autoclass:: bakthat.models.Inventory
+   :members:
+
+
+.. autoclass:: bakthat.models.Jobs
+   :members:
+
+
+.. autoclass:: bakthat.models.Config
+   :members:

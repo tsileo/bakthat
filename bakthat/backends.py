@@ -12,7 +12,8 @@ import math
 from boto.glacier.exceptions import UnexpectedHTTPResponseError
 from boto.exception import S3ResponseError
 
-from bakthat.conf import config, dump_truck, DEFAULT_LOCATION, CONFIG_FILE
+from bakthat.conf import config, DEFAULT_LOCATION, CONFIG_FILE
+from bakthat.models import Inventory, Jobs
 
 log = logging.getLogger(__name__)
 
@@ -130,7 +131,7 @@ class GlacierBackend(BakthatBackend):
         self.container_key = "glacier_vault"
 
     def load_archives(self):
-        return dump_truck.dump("inventory")
+        return []
 
     def backup_inventory(self):
         """Backup the local inventory from shelve as a json string to S3."""
@@ -182,16 +183,9 @@ class GlacierBackend(BakthatBackend):
 
     def upload(self, keyname, filename):
         archive_id = self.vault.concurrent_create_archive_from_file(filename, keyname)
-
-        dump_truck.upsert({"filename": keyname, "archive_id": archive_id}, "inventory")
+        Inventory.create(filename=keyname, archive_id=archive_id)
 
         #self.backup_inventory()
-
-    def get_archive_id(self, filename):
-        """Get the archive_id corresponding to the filename."""
-        res = dump_truck.execute('SELECT archive_id FROM inventory WHERE filename == "{0}"'.format(filename))
-        if res:
-            return res[0].get("archive_id")
 
     def get_job_id(self, filename):
         """Get the job_id corresponding to the filename.
@@ -200,9 +194,7 @@ class GlacierBackend(BakthatBackend):
         :param filename: Stored filename.
 
         """
-        res = dump_truck.execute('SELECT job_id FROM jobs WHERE filename LIKE "{0}%"'.format(filename))
-        if res:
-            return res[0].get("job_id")
+        return Jobs.get_job_id(filename)
 
     def delete_job(self, filename):
         """Delete the job entry for the filename.
@@ -211,11 +203,12 @@ class GlacierBackend(BakthatBackend):
         :param filename: Stored filename.
 
         """
-        dump_truck.execute("DELETE FROM jobs WHERE filename == '{0}'".format(filename))
+        job = Jobs.get(Jobs.filename == filename)
+        job.delete_instance()
 
     def download(self, keyname, job_check=False):
         """Initiate a Job, check its status, and download the archive if it's completed."""
-        archive_id = self.get_archive_id(keyname)
+        archive_id = Inventory.get_archive_id(keyname)
         if not archive_id:
             log.error("{0} not found !")
             # check if the file exist on S3 ?
@@ -223,7 +216,7 @@ class GlacierBackend(BakthatBackend):
 
         job = None
 
-        job_id = self.get_job_id(keyname)
+        job_id = Jobs.get_job_id(keyname)
         log.debug("Job: {0}".format(job_id))
 
         if job_id:
@@ -235,7 +228,7 @@ class GlacierBackend(BakthatBackend):
         if not job:
             job = self.vault.retrieve_archive(archive_id)
             job_id = job.id
-            dump_truck.upsert({"filename": keyname, "job_id": job_id}, "jobs")
+            Jobs.update_job_id(keyname, job_id)
 
         log.info("Job {action}: {status_code} ({creation_date}/{completion_date})".format(**job.__dict__))
 
@@ -271,32 +264,25 @@ class GlacierBackend(BakthatBackend):
             return self.vault.get_job(jobid)
 
     def ls(self):
-        return [ivt.get("filename") for ivt in dump_truck.dump("inventory")]
+        return [ivt.filename for ivt in Inventory.select()]
 
     def delete(self, keyname):
-        archive_id = self.get_archive_id(keyname)
+        archive_id = Inventory.get_archive_id(keyname)
         if archive_id:
             self.vault.delete_archive(archive_id)
-            with glacier_shelve() as d:
-                archives = d["archives"]
+            archive_data = Inventory.get(Inventory.filename == keyname)
+            archive_data.delete_instance()
 
-                if keyname in archives:
-                    del archives[keyname]
+            #self.backup_inventory()
 
-                d["archives"] = archives
-
-            dump_truck.execute("DELETE FROM inventory WHERE filename == '{0}'".format(keyname))
-
-            self.backup_inventory()
-
-    def upgrade_to_dump_truck(self):
+    def upgrade_from_shelve(self):
         try:
             with glacier_shelve() as d:
                 archives = d["archives"]
                 if "archives" in d:
                     for key, archive_id in archives.items():
                         #print {"filename": key, "archive_id": archive_id}
-                        dump_truck.upsert({"filename": key, "archive_id": archive_id}, "inventory")
+                        Inventory.create(**{"filename": key, "archive_id": archive_id})
                         del archives[key]
                 d["archives"] = archives
         except Exception, exc:
