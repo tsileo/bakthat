@@ -58,7 +58,9 @@ class Backups(BaseModel):
             return
 
     @classmethod
-    def search(cls, query="", destination=["s3", "glacier"], **kwargs):
+    def search(cls, query="", destination="", **kwargs):
+        if not destination:
+            destination = ["s3", "glacier"]
         if isinstance(destination, (str, unicode)):
             destination = [destination]
 
@@ -111,7 +113,6 @@ class Backups(BaseModel):
         if q.count():
             Backups.update(**backup).where(Backups.stored_filename == backup.get("stored_filename")).execute()
         else:
-            print "create"
             Backups.create(**backup)
 
     class Meta:

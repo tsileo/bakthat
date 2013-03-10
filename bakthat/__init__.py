@@ -331,10 +331,10 @@ def info(filename=os.getcwd(), destination=None, profile="default", **kwargs):
 
 @app.cmd(help="Show backups list.")
 @app.cmd_arg('query', type=str, default="", help="search filename for query", nargs="?")
-@app.cmd_arg('-d', '--destination', type=str, default=DEFAULT_DESTINATION, help="glacier|s3, default both")
+@app.cmd_arg('-d', '--destination', type=str, default="", help="glacier|s3, default both")
 @app.cmd_arg('-t', '--tags', type=str, default="", help="tags space separated")
 @app.cmd_arg('-p', '--profile', type=str, default="default", help="profile name (all profiles are displayed by default)")
-def show(query="", destination=DEFAULT_DESTINATION, tags="", profile="default", help="Profile, blank to show all"):
+def show(query="", destination="", tags="", profile="default", help="Profile, blank to show all"):
     backups = Backups.search(query, destination, profile=profile, tags=tags)
     _display_backups(backups)
 
