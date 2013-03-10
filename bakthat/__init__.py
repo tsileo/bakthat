@@ -23,7 +23,7 @@ from bakthat.conf import config, DEFAULT_DESTINATION, DEFAULT_LOCATION, CONFIG_F
 from bakthat.utils import _interval_string_to_seconds
 from bakthat.models import Backups, Inventory
 
-__version__ = "0.4.3"
+__version__ = "0.4.4"
 
 app = aaargh.App(description="Compress, encrypt and upload files directly to Amazon S3/Glacier.")
 

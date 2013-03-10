@@ -86,6 +86,13 @@ Bakthat Python API
 Changelog
 ---------
 
+0.4.4
+~~~~~
+
+**Mars 10 2013**
+
+- bugfix (forgot to remove a dumptruck import)
+
 0.4.3
 ~~~~~
 

@@ -204,10 +204,10 @@ for table in [Backups, Jobs, Inventory, Config]:
 
 
 def switch_from_dt_to_peewee():
-    import dumptruck
     import os
-    import time
     if os.path.isfile(os.path.expanduser("~/.bakthat.dt")):
+        import dumptruck
+        import time
         dt = dumptruck.DumpTruck(dbname=os.path.expanduser("~/.bakthat.dt"), vars_table="config")
         for backup in dt.dump("backups"):
             try:
