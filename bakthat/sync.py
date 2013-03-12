@@ -25,7 +25,8 @@ class BakSyncer():
     :type conf: dict
     :param conf: Config (url, username, password)
     """
-    def __init__(self, conf={}):
+    def __init__(self, conf=None):
+        conf = {} if conf is None else conf
         sync_conf = dict(url=config.get("sync", {}).get("url"),
                          username=config.get("sync", {}).get("username"),
                          password=config.get("sync", {}).get("password"))
@@ -34,9 +35,7 @@ class BakSyncer():
         self.sync_auth = (sync_conf["username"], sync_conf["password"])
         self.api_url = sync_conf["url"]
 
-        self.request_kwargs = {}
-        if self.auth:
-            self.request_kwargs["auth"] = self.sync_auth
+        self.request_kwargs = dict(auth=self.sync_auth)
 
         self.request_kwargs["headers"] = {'content-type': 'application/json', 'bakthat-client': socket.gethostname()}
 
