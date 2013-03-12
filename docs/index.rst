@@ -30,7 +30,7 @@ Requirements
 * `beefish <http://pypi.python.org/pypi/beefish>`_
 * `boto <http://pypi.python.org/pypi/boto>`_
 * `GrandFatherSon <https://pypi.python.org/pypi/GrandFatherSon>`_
-* `DumpTruck <http://www.dumptruck.io/>`_
+* `peewee <http://peewee.readthedocs.org/>`_
 * `byteformat <https://pypi.python.org/pypi/byteformat>`_
 * `pyyaml <http://pyyaml.org>`_
 * `sh <http://amoffat.github.com/sh/>`_
