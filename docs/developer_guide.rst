@@ -35,9 +35,39 @@ You can access low level API (the same used when using bakthat in command line m
     # restore in the current working directory
     bakthat.restore("bak", conf=bakthat_conf)
 
+Helpers
+-------
+
+KeyValue
+~~~~~~~~
+
+KeyValue is a "key value" store that allows you to store/retrieve string on Amazon S3.
+
+.. code-block:: python
+
+    from bakthat.helper import KeyValue
+    import json
+
+    bakthat_conf = {'access_key': 'YOURACCESSKEY',
+                    'secret_key': 'YOURSECRETKEY',
+                    'glacier_vault': 'yourvault',
+                    's3_bucket': 'yours3bucket',
+                    'region_name': 'es-east-1'}
+
+    kv = KeyValue(conf=bakthat_conf)
+    mydata = {"some": "data"}
+    kv.set_key("mykey", json.dumps(mydata))
+
+    mydata_restored = kv.get_key("mykey")
+
+    data_url = kv.get_key_url("mykey", 60)  # url expires in 60 secondes
+
+    kv.delete_key("mykey")
+
+.. _keyvalue:
 
 BakHelper
----------
+~~~~~~~~~
 
 BakHelper is a context manager that makes create backup script with bakthat (and it works well with `sh <http://amoffat.github.com/sh/>`_) an easy task.
 
@@ -99,8 +129,8 @@ You can also use it like a normal class:
     bh.rotate("myfile.txt")
 
 
-Create a MySQL backup script
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Create a MySQL backup script with BakHelper
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Here is a MySQL backup script, it makes use of `sh <http://amoffat.github.com/sh/>`_ to call system **mysqldump**.
 
