@@ -113,6 +113,7 @@ class Backups(BaseModel):
         q = Backups.select()
         q = q.where(Backups.stored_filename == backup.get("stored_filename"))
         if q.count():
+            del backup["stored_filename"]
             Backups.update(**backup).where(Backups.stored_filename == backup.get("stored_filename")).execute()
         else:
             Backups.create(**backup)
@@ -134,7 +135,7 @@ class Config(BaseModel):
             return default
 
     @classmethod
-    def set_key(self, key, value):
+    def set_key(self, key, value=None):
         q = Config.select().where(Config.key == key)
         if q.count():
             Config.update(value=value).where(Config.key == key).execute()
