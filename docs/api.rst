@@ -88,6 +88,12 @@ BakHelper
 .. autoclass:: bakthat.helper.BakHelper
    :members:
 
+KeyValue
+~~~~~~~~
+
+.. autoclass:: bakthat.helper.KeyValue
+   :members:
+
 Sync
 ----
 

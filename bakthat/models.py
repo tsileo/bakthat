@@ -3,6 +3,8 @@ from datetime import datetime
 from bakthat.conf import config, DATABASE
 import hashlib
 import json
+import sqlite3
+import os
 
 database = peewee.SqliteDatabase(DATABASE)
 
@@ -203,8 +205,21 @@ for table in [Backups, Jobs, Inventory, Config]:
         table.create_table()
 
 
+def backup_sqlite(filename):
+    """Backup bakthat SQLite database to file."""
+    con = sqlite3.connect(DATABASE)
+    with open(filename, 'w') as f:
+        for line in con.iterdump():
+            f.write("{0}\n".format(line))
+
+
+def restore_sqlite(filename):
+    """Restore a dump into bakthat SQLite database."""
+    con = sqlite3.connect(DATABASE)
+    con.executescript(open(filename).read())
+
+
 def switch_from_dt_to_peewee():
-    import os
     if os.path.isfile(os.path.expanduser("~/.bakthat.dt")):
         import dumptruck
         import time

@@ -33,6 +33,25 @@ class BakthatTestCase(unittest.TestCase):
         self.assertEqual(bakthat._interval_string_to_seconds("2D1h"), 86400 * 2 + 3600)
         self.assertEqual(bakthat._interval_string_to_seconds("3M"), 3*30*86400)
 
+    def test_keyvalue_helper(self):
+        from bakthat.helper import KeyValue
+        kv = KeyValue()
+        test_string = "Bakthat Test str"
+        test_key = "bakthatunittest"
+        test_key2 = "itshouldfail"
+        kv.set_key(test_key, test_string)
+        self.assertEqual(test_string, kv.get_key(test_key))
+
+        from urllib2 import urlopen, HTTPError
+        test_url = kv.get_key_url(test_key, 10)
+        self.assertEqual(urlopen(test_url).read(), test_string)
+        time.sleep(30)
+        with self.assertRaises(HTTPError):
+            self.assertEqual(urlopen(test_url).read(), test_string)
+
+        kv.delete_key(test_key)
+        self.assertEqual(kv.get_key(test_key), None)
+        self.assertEqual(kv.get_key(test_key2), None)
 
     def test_s3_backup_restore(self):
         backup_data = bakthat.backup(self.test_file.name, "s3", password="")

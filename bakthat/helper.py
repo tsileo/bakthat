@@ -5,10 +5,84 @@ import sh
 import os
 import shutil
 
+from boto.s3.key import Key
+
 import bakthat
 from bakthat.conf import DEFAULT_DESTINATION
+from bakthat.backends import S3Backend
 
 log = logging.getLogger(__name__)
+
+
+class KeyValue(S3Backend):
+    """A Key Value store to store/retrieve string on S3."""
+    def __init__(self, conf={}, profile="default"):
+        S3Backend.__init__(self, conf, profile)
+
+    def set_key(self, keyname, string):
+        """Store a string as keyname in S3.
+
+        :type keyname: str
+        :param keyname: Key name
+
+        :type string: str
+        :param string: Content to store as str
+
+        """
+        k = Key(self.bucket)
+        k.key = keyname
+
+        k.set_contents_from_string(string)
+        k.set_acl("private")
+
+    def get_key(self, keyname, default=None):
+        """Return the object content as string.
+
+        :type keyname: str
+        :param keyname: Key name
+
+        :type default: str
+        :param default: Default value if key name does not exist, None by default
+
+        :rtype: str
+        :return: The key content as string, or default value.
+        """
+        k = Key(self.bucket)
+        k.key = keyname
+        if k.exists():
+            return k.get_contents_as_string()
+        return default
+
+    def delete_key(self, keyname):
+        """Return the object content as string.
+
+        :type keyname: str
+        :param keyname: Key name
+        """
+        k = Key(self.bucket)
+        k.key = keyname
+        if k.exists():
+            k.delete()
+
+    def get_key_url(self, keyname, expires_in, method="GET"):
+        """Generate a URL for the keyname object.
+
+        :type keyname: str
+        :param keyname: Key name
+
+        :type expires_in: int
+        :param expires_in: Number of the second before the expiration of the link
+
+        :type method: str
+        :param method: HTTP method for access
+
+        :rtype str:
+        :return: The URL to download the content of the given keyname
+        """
+        k = Key(self.bucket)
+        k.key = keyname
+        if k.exists:
+            return k.generate_url(expires_in, method)
 
 
 class BakHelper:
