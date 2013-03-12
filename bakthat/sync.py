@@ -2,6 +2,7 @@
 import logging
 import socket
 from bakthat.models import Backups, Config
+from bakthat.conf import config
 
 try:
     import requests
@@ -91,3 +92,12 @@ class BakSyncer():
         Config.set_key("sync_ts", sync_ts)
 
         log.debug("Sync succcesful")
+
+    @classmethod
+    def sync_auto(cls):
+        """Trigger sync if autosync is enabled."""
+        sync_conf = config.get("sync", {})
+        if sync_conf.get("auto", False):
+            sync_url = sync_conf.get("url")
+            sync_auth = (sync_conf.get("username"), sync_conf.get("password"))
+            BakSyncer(sync_url, sync_auth).sync()

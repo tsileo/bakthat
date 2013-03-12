@@ -22,6 +22,7 @@ from bakthat.backends import GlacierBackend, S3Backend, RotationConfig
 from bakthat.conf import config, DEFAULT_DESTINATION, DEFAULT_LOCATION, CONFIG_FILE
 from bakthat.utils import _interval_string_to_seconds
 from bakthat.models import Backups, Inventory
+from bakthat.sync import BakSyncer
 
 __version__ = "0.4.4"
 
@@ -116,6 +117,8 @@ def delete_older_than(filename, interval, destination=DEFAULT_DESTINATION, profi
         backup.set_deleted()
         deleted.append(real_key)
 
+    BakSyncer.sync_auto()
+
     return deleted
 
 
@@ -179,6 +182,8 @@ def rotate_backups(filename, destination=DEFAULT_DESTINATION, profile="default",
             storage_backend.delete(real_key)
             backup.set_deleted()
             deleted.append(real_key)
+
+    BakSyncer.sync_auto()
 
     return deleted
 
@@ -310,6 +315,8 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
 
     # Insert backup metadata in SQLite
     Backups.create(**backup_data)
+
+    BakSyncer.sync_auto()
 
     return backup_data
 
@@ -536,6 +543,8 @@ def delete(filename, destination=DEFAULT_DESTINATION, profile="default", **kwarg
 
     storage_backend.delete(key_name)
     backup.set_deleted()
+
+    BakSyncer.sync_auto()
 
     return True
 
