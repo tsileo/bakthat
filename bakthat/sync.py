@@ -22,18 +22,21 @@ class BakSyncer():
         your s3_bucket or glacier_vault, to be able to sync multiple
         client with the same configuration stored as metadata for each bakckupyy.
 
-    :type api_url: str
-    :param api_url: Base API URL
-
-    :type auth: tuple
-    :param auth: A tuple/list with credentials (username, password)
+    :type conf: dict
+    :param conf: Config (url, username, password)
     """
-    def __init__(self, api_url, auth=None, **kwargs):
-        self.api_url = api_url
-        self.auth = auth
+    def __init__(self, conf={}):
+        sync_conf = dict(url=config.get("sync", {}).get("url"),
+                         username=config.get("sync", {}).get("username"),
+                         password=config.get("sync", {}).get("password"))
+        sync_conf.update(conf)
+
+        self.sync_auth = (sync_conf["username"], sync_conf["password"])
+        self.api_url = sync_conf["url"]
+
         self.request_kwargs = {}
         if self.auth:
-            self.request_kwargs["auth"] = self.auth
+            self.request_kwargs["auth"] = self.sync_auth
 
         self.request_kwargs["headers"] = {'content-type': 'application/json', 'bakthat-client': socket.gethostname()}
 
@@ -93,11 +96,7 @@ class BakSyncer():
 
         log.debug("Sync succcesful")
 
-    @classmethod
-    def sync_auto(cls):
+    def sync_auto(self):
         """Trigger sync if autosync is enabled."""
-        sync_conf = config.get("sync", {})
-        if sync_conf.get("auto", False):
-            sync_url = sync_conf.get("url")
-            sync_auth = (sync_conf.get("username"), sync_conf.get("password"))
-            BakSyncer(sync_url, sync_auth).sync()
+        if config.get("sync", {}).get("auto", False):
+            self.sync()

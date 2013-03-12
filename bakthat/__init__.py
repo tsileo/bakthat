@@ -117,7 +117,7 @@ def delete_older_than(filename, interval, destination=DEFAULT_DESTINATION, profi
         backup.set_deleted()
         deleted.append(real_key)
 
-    BakSyncer.sync_auto()
+    BakSyncer(conf).sync_auto()
 
     return deleted
 
@@ -183,7 +183,7 @@ def rotate_backups(filename, destination=DEFAULT_DESTINATION, profile="default",
             backup.set_deleted()
             deleted.append(real_key)
 
-    BakSyncer.sync_auto()
+    BakSyncer(conf).sync_auto()
 
     return deleted
 
@@ -316,7 +316,7 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
     # Insert backup metadata in SQLite
     Backups.create(**backup_data)
 
-    BakSyncer.sync_auto()
+    BakSyncer(conf).sync_auto()
 
     return backup_data
 
@@ -544,9 +544,16 @@ def delete(filename, destination=DEFAULT_DESTINATION, profile="default", **kwarg
     storage_backend.delete(key_name)
     backup.set_deleted()
 
-    BakSyncer.sync_auto()
+    BakSyncer(conf).sync_auto()
 
     return True
+
+
+@app.cmd(help="Trigger synchronization")
+def synchronize(**kwargs):
+    """Trigger synchronization."""
+    conf = kwargs.get("conf")
+    BakSyncer(conf).sync()
 
 
 @app.cmd(help="List stored backups.")
