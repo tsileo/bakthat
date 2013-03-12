@@ -212,6 +212,9 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
     :type conf: dict
     :keyword conf: Override/set AWS configuration.
 
+    :type custom_filename: str
+    :keyword custom_filename: Override the original filename (only in metadata)
+
     :rtype: dict
     :return: A dict containing the following keys: stored_filename, size, metadata, backend and filename.
 
@@ -227,7 +230,7 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
     stored_filename = backup_file_fmt.format(arcname, date_component)
 
     backup_date = int(now.strftime("%s"))
-    backup_data = dict(filename=arcname,
+    backup_data = dict(filename=kwargs.get("custom_filename", arcname),
                        backup_date=backup_date,
                        last_updated=backup_date,
                        backend=destination,

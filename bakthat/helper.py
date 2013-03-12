@@ -90,8 +90,9 @@ class BakHelper:
 
     Designed to be used as a context manager.
 
-    :type dir_prefix: str
-    :param dir_prefix: Prefix for the created temporary directory.
+    :type backup_name: str
+    :param backup_name: Backup name
+        also the prefix for the created temporary directory.
 
     :type destination: str
     :keyword destination: Destination (glacier|s3)
@@ -108,8 +109,9 @@ class BakHelper:
     :type tags: list
     :param tags: List of tags
     """
-    def __init__(self, dir_prefix="tmp", **kwargs):
-        self.dir_prefix = "{0}_".format(dir_prefix)
+    def __init__(self, backup_name, **kwargs):
+        self.backup_name = backup_name
+        self.dir_prefix = "{0}_".format(backup_name)
         self.destination = kwargs.get("destination", DEFAULT_DESTINATION)
         self.password = kwargs.get("password", "")
         self.profile = kwargs.get("profile", "default")
@@ -188,11 +190,12 @@ class BakHelper:
             filename = self.tmpd
 
         return bakthat.backup(filename,
-                            destination=kwargs.get("destination", self.destination),
-                            password=kwargs.get("password", self.password),
-                            tags=kwargs.get("tags", self.tags),
-                            profile=kwargs.get("profile", self.profile),
-                            conf=kwargs.get("conf", self.conf))
+                              destination=kwargs.get("destination", self.destination),
+                              password=kwargs.get("password", self.password),
+                              tags=kwargs.get("tags", self.tags),
+                              profile=kwargs.get("profile", self.profile),
+                              conf=kwargs.get("conf", self.conf),
+                              custom_filename=self.backup_name)
 
     def restore(self, filename, **kwargs):
         """Restore backup in the current working directory.
@@ -216,10 +219,10 @@ class BakHelper:
         :return: True if successful.
         """
         return bakthat.restore(filename,
-                                destination=kwargs.get("destination", self.destination),
-                                password=kwargs.get("password", self.password),
-                                profile=kwargs.get("profile", self.profile),
-                                conf=kwargs.get("conf", self.conf))
+                               destination=kwargs.get("destination", self.destination),
+                               password=kwargs.get("password", self.password),
+                               profile=kwargs.get("profile", self.profile),
+                               conf=kwargs.get("conf", self.conf))
 
     def delete_older_than(self, filename=None, interval=None, **kwargs):
         """Delete backups older than the given interval string.
@@ -247,9 +250,9 @@ class BakHelper:
             filename = self.tmpd
 
         return bakthat.delete_older_than(filename, interval,
-                                        destination=kwargs.get("destination", self.destination),
-                                        profile=kwargs.get("profile", self.profile),
-                                        conf=kwargs.get("conf", self.conf))
+                                         destination=kwargs.get("destination", self.destination),
+                                         profile=kwargs.get("profile", self.profile),
+                                         conf=kwargs.get("conf", self.conf))
 
     def rotate(self, filename=None, **kwargs):
         """Rotate backup using grandfather-father-son rotation scheme.
@@ -273,6 +276,6 @@ class BakHelper:
             filename = self.tmpd
 
         return bakthat.rotate_backups(filename,
-                                    destination=kwargs.pop("destination", self.destination),
-                                    profile=kwargs.get("profile", self.profile),
-                                    conf=kwargs.get("conf", self.conf))
+                                      destination=kwargs.pop("destination", self.destination),
+                                      profile=kwargs.get("profile", self.profile),
+                                      conf=kwargs.get("conf", self.conf))
