@@ -1,7 +1,6 @@
 # -*- encoding: utf-8 -*-
 import logging
 import socket
-from bakthat.backends import BakthatBackend
 from bakthat.models import Backups, Config
 
 try:
@@ -13,7 +12,7 @@ import json
 log = logging.getLogger(__name__)
 
 
-class BakSyncer(BakthatBackend):
+class BakSyncer():
     """Helper to synchronize change on a backup set via a REST API.
 
     No sensitive information is transmitted except (you should be using https):
@@ -29,9 +28,6 @@ class BakSyncer(BakthatBackend):
     :param auth: A tuple/list with credentials (username, password)
     """
     def __init__(self, api_url, auth=None, **kwargs):
-        conf = kwargs.get("conf")
-        BakthatBackend.__init__(self, conf, extra_conf=["glacier_vault", "s3_bucket"])
-
         self.api_url = api_url
         self.auth = auth
         self.request_kwargs = {}

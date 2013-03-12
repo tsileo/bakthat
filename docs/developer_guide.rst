@@ -38,6 +38,8 @@ You can access low level API (the same used when using bakthat in command line m
 Helpers
 -------
 
+.. _keyvalue:
+
 KeyValue
 ~~~~~~~~
 
@@ -55,6 +57,7 @@ KeyValue is a "key value" store that allows you to store/retrieve string on Amaz
                     'region_name': 'es-east-1'}
 
     kv = KeyValue(conf=bakthat_conf)
+
     mydata = {"some": "data"}
     kv.set_key("mykey", json.dumps(mydata))
 
@@ -64,7 +67,6 @@ KeyValue is a "key value" store that allows you to store/retrieve string on Amaz
 
     kv.delete_key("mykey")
 
-.. _keyvalue:
 
 BakHelper
 ~~~~~~~~~
