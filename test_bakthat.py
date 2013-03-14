@@ -43,12 +43,12 @@ class BakthatTestCase(unittest.TestCase):
         kv.set_key(test_key, test_string)
         self.assertEqual(test_string, kv.get_key(test_key))
 
-        from urllib2 import urlopen, HTTPError
-        test_url = kv.get_key_url(test_key, 10)
-        self.assertEqual(json.loads(urlopen(test_url).read()), test_string)
-        time.sleep(30)
-        with self.assertRaises(HTTPError):
-            urlopen(test_url).read()
+        #from urllib2 import urlopen, HTTPError
+        #test_url = kv.get_key_url(test_key, 10)
+        #self.assertEqual(json.loads(urlopen(test_url).read()), test_string)
+        #time.sleep(30)
+        #with self.assertRaises(HTTPError):
+        #    urlopen(test_url).read()
 
         kv.delete_key(test_key)
         self.assertEqual(kv.get_key(test_key), None)
@@ -59,12 +59,12 @@ class BakthatTestCase(unittest.TestCase):
         log.info(backup_data)
 
         self.assertEqual(bakthat.match_filename(self.test_filename, "s3")[0]["filename"],
-                        self.test_filename)
+                         self.test_filename)
 
         bakthat.restore(self.test_filename, "s3")
-        
+
         restored_hash = hashlib.sha1(open(self.test_filename).read()).hexdigest()
-        
+
         self.assertEqual(self.test_hash, restored_hash)
 
         os.remove(self.test_filename)
@@ -73,17 +73,16 @@ class BakthatTestCase(unittest.TestCase):
 
         self.assertEqual(bakthat.match_filename(self.test_filename), [])
 
-
     def test_s3_delete_older_than(self):
         backup_res = bakthat.backup(self.test_file.name, "s3", password="")
 
         self.assertEqual(bakthat.match_filename(self.test_filename, "s3")[0]["filename"],
-                        self.test_filename)
+                         self.test_filename)
 
         bakthat.restore(self.test_filename, "s3")
-        
+
         restored_hash = hashlib.sha1(open(self.test_filename).read()).hexdigest()
-        
+
         self.assertEqual(self.test_hash, restored_hash)
 
         os.remove(self.test_filename)
@@ -102,13 +101,11 @@ class BakthatTestCase(unittest.TestCase):
 
         self.assertEqual(bakthat.match_filename(self.test_filename), [])
 
-
     def test_s3_encrypted_backup_restore(self):
-
         bakthat.backup(self.test_file.name, "s3", password=self.password)
 
-        self.assertEqual(bakthat.match_filename(self.test_filename, "s3")[0]["filename"]
-                        ,self.test_filename)
+        self.assertEqual(bakthat.match_filename(self.test_filename, "s3")[0]["filename"],
+                         self.test_filename)
 
         # Check if stored file is encrypted
         self.assertTrue(bakthat.match_filename(self.test_filename, "s3")[0]["is_enc"])
@@ -116,7 +113,7 @@ class BakthatTestCase(unittest.TestCase):
         bakthat.restore(self.test_filename, "s3", password=self.password)
 
         restored_hash = hashlib.sha1(open(self.test_filename).read()).hexdigest()
-        
+
         self.assertEqual(self.test_hash, restored_hash)
 
         os.remove(self.test_filename)
@@ -136,11 +133,10 @@ class BakthatTestCase(unittest.TestCase):
             #                self.test_filename)
             # TODO replace by a Backups.search
 
-
-            # We initialize glacier backend 
+            # We initialize glacier backend
             # to check that the file appear in both local and remote (S3) inventory
-            glacier_backend = GlacierBackend(None)
-            
+            #glacier_backend = GlacierBackend(None)
+
             #archives = glacier_backend.load_archives()
             #archives_s3 = glacier_backend.load_archives_from_s3()
 
@@ -155,7 +151,7 @@ class BakthatTestCase(unittest.TestCase):
 
             # Restore backup
             job = bakthat.restore(self.test_filename, "glacier", job_check=True)
-            
+
             # Check that a job is initiated
             self.assertEqual(job.__dict__["action"], "ArchiveRetrieval")
             self.assertEqual(job.__dict__["status_code"], "InProgress")
@@ -163,11 +159,11 @@ class BakthatTestCase(unittest.TestCase):
             while 1:
                 # Check every ten minutes if the job is done
                 result = bakthat.restore(self.test_filename, "glacier")
-                
+
                 # If job is done, we can download the file
                 if result:
                     restored_hash = hashlib.sha1(open(self.test_filename).read()).hexdigest()
-        
+
                     # Check if the hash of the restored file is equal to inital file hash
                     self.assertEqual(self.test_hash, restored_hash)
 
@@ -184,8 +180,7 @@ class BakthatTestCase(unittest.TestCase):
                     #archives_s3 = glacier_backend.load_archives_from_s3()
 
                     # Check if the file has been removed from both archives
-                    #self.assertEqual(archives, archives_s3) 
-
+                    #self.assertEqual(archives, archives_s3)
                     #self.assertTrue(inventory_key_name not in archives)
                     #self.assertTrue(inventory_key_name not in archives_s3)
 

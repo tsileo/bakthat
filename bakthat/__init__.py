@@ -11,6 +11,7 @@ import re
 import mimetypes
 import calendar
 from contextlib import closing  # for Python2.6 compatibility
+from gzip import GzipFile
 
 import yaml
 from beefish import decrypt, encrypt_file
@@ -490,9 +491,14 @@ def restore(filename, destination=DEFAULT_DESTINATION, profile="default", **kwar
     if out:
         log.info("Uncompressing...")
         out.seek(0)
-        tar = tarfile.open(fileobj=out)
-        tar.extractall()
-        tar.close()
+        if not backup.metadata.get("KeyValue"):
+            tar = tarfile.open(fileobj=out)
+            tar.extractall()
+            tar.close()
+        else:
+            with closing(GzipFile(fileobj=out, mode="r")) as f:
+                with open(backup.stored_filename, "w") as out:
+                    out.write(f.read())
 
         return True
 

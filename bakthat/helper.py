@@ -4,23 +4,33 @@ import tempfile
 import sh
 import os
 import shutil
+import time
+import hashlib
 import json
+from StringIO import StringIO
+from gzip import GzipFile
 
 from boto.s3.key import Key
 
 import bakthat
 from bakthat.conf import DEFAULT_DESTINATION
 from bakthat.backends import S3Backend
+from bakthat.models import Backups
 
 log = logging.getLogger(__name__)
 
 
 class KeyValue(S3Backend):
-    """A Key Value store to store/retrieve json encoded object on S3."""
+    """A Key Value store to store/retrieve object/string on S3.
+
+    Data is gzipped and json encoded before uploading,
+    compression can be disabled.
+    """
     def __init__(self, conf={}, profile="default"):
         S3Backend.__init__(self, conf, profile)
+        self.profile = profile
 
-    def set_key(self, keyname, value):
+    def set_key(self, keyname, value, compress=True):
         """Store a string as keyname in S3.
 
         :type keyname: str
@@ -29,12 +39,42 @@ class KeyValue(S3Backend):
         :type value: str
         :param value: Value to save, will be json encoded.
 
+        :type value: bool
+        :param compress: Compress content with gzip,
+            True by default
         """
         k = Key(self.bucket)
         k.key = keyname
 
-        k.set_contents_from_string(json.dumps(value))
+        backup_date = int(time.time())
+        backup = dict(filename=keyname,
+                      stored_filename=keyname,
+                      backup_date=backup_date,
+                      last_updated=backup_date,
+                      backend="s3",
+                      is_deleted=False,
+                      tags="",
+                      metadata={"KeyValue": True})
+
+        actual_value = json.dumps(value)
+
+        if compress:
+            out = StringIO()
+            f = GzipFile(fileobj=out, mode="w")
+            f.write(actual_value)
+            f.close()
+
+            actual_value = out.getvalue()
+
+        # Creating the object on S3
+        k.set_contents_from_string(actual_value)
         k.set_acl("private")
+        backup["size"] = k.size
+
+        access_key = self.conf.get("access_key")
+        container_key = self.conf.get(self.container_key)
+        backup["backend_hash"] = hashlib.sha512(access_key + container_key).hexdigest()
+        Backups.upsert(**backup)
 
     def get_key(self, keyname, default=None):
         """Return the object stored under keyname.
@@ -51,7 +91,11 @@ class KeyValue(S3Backend):
         k = Key(self.bucket)
         k.key = keyname
         if k.exists():
-            return json.loads(k.get_contents_as_string())
+            content = k.get_contents_as_string()
+            if content.startswith("\x1f\x8b\x08\x00"):
+                with GzipFile(fileobj=StringIO(content), mode="r") as f:
+                    content = f.read()
+            return json.loads(content)
         return default
 
     def delete_key(self, keyname):
@@ -64,6 +108,8 @@ class KeyValue(S3Backend):
         k.key = keyname
         if k.exists():
             k.delete()
+            backup = Backups.match_filename(keyname, "s3", profile=self.profile)
+            backup.set_deleted()
 
     def get_key_url(self, keyname, expires_in, method="GET"):
         """Generate a URL for the keyname object.
