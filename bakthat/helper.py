@@ -4,6 +4,7 @@ import tempfile
 import sh
 import os
 import shutil
+import json
 
 from boto.s3.key import Key
 
@@ -15,28 +16,28 @@ log = logging.getLogger(__name__)
 
 
 class KeyValue(S3Backend):
-    """A Key Value store to store/retrieve string on S3."""
+    """A Key Value store to store/retrieve json encoded object on S3."""
     def __init__(self, conf={}, profile="default"):
         S3Backend.__init__(self, conf, profile)
 
-    def set_key(self, keyname, string):
+    def set_key(self, keyname, value):
         """Store a string as keyname in S3.
 
         :type keyname: str
         :param keyname: Key name
 
-        :type string: str
-        :param string: Content to store as str
+        :type value: str
+        :param value: Value to save, will be json encoded.
 
         """
         k = Key(self.bucket)
         k.key = keyname
 
-        k.set_contents_from_string(string)
+        k.set_contents_from_string(json.dumps(value))
         k.set_acl("private")
 
     def get_key(self, keyname, default=None):
-        """Return the object content as string.
+        """Return the object stored under keyname.
 
         :type keyname: str
         :param keyname: Key name
@@ -50,11 +51,11 @@ class KeyValue(S3Backend):
         k = Key(self.bucket)
         k.key = keyname
         if k.exists():
-            return k.get_contents_as_string()
+            return json.loads(k.get_contents_as_string())
         return default
 
     def delete_key(self, keyname):
-        """Return the object content as string.
+        """Delete the given key.
 
         :type keyname: str
         :param keyname: Key name
@@ -66,6 +67,8 @@ class KeyValue(S3Backend):
 
     def get_key_url(self, keyname, expires_in, method="GET"):
         """Generate a URL for the keyname object.
+
+        Be careful, the response is JSON encoded.
 
         :type keyname: str
         :param keyname: Key name

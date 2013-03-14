@@ -1,17 +1,18 @@
 # -*- encoding: utf-8 -*-
 import bakthat
 import tempfile
+import json
 import hashlib
 import os
 import time
 import unittest
 import logging
 
-from bakthat.conf import config, DEFAULT_DESTINATION, DEFAULT_LOCATION
 from bakthat.backends import GlacierBackend
 
 log = logging.getLogger()
 logging.basicConfig(level=logging.DEBUG)
+
 
 class BakthatTestCase(unittest.TestCase):
 
@@ -24,10 +25,10 @@ class BakthatTestCase(unittest.TestCase):
         self.password = "bakthat_encrypted_test"
 
     def test_internals(self):
-        with self.assertRaises(Exception) as ar:
+        with self.assertRaises(Exception):
             bakthat._match_filename("", "s3")
 
-        with self.assertRaises(Exception) as ar:
+        with self.assertRaises(Exception):
             bakthat._interval_string_to_seconds("1z")
 
         self.assertEqual(bakthat._interval_string_to_seconds("2D1h"), 86400 * 2 + 3600)
@@ -44,10 +45,10 @@ class BakthatTestCase(unittest.TestCase):
 
         from urllib2 import urlopen, HTTPError
         test_url = kv.get_key_url(test_key, 10)
-        self.assertEqual(urlopen(test_url).read(), test_string)
+        self.assertEqual(json.loads(urlopen(test_url).read()), test_string)
         time.sleep(30)
         with self.assertRaises(HTTPError):
-            self.assertEqual(urlopen(test_url).read(), test_string)
+            urlopen(test_url).read()
 
         kv.delete_key(test_key)
         self.assertEqual(kv.get_key(test_key), None)
