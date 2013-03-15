@@ -38,11 +38,14 @@ class BakthatTestCase(unittest.TestCase):
         from bakthat.helper import KeyValue
         kv = KeyValue()
         test_string = "Bakthat Test str"
-        test_key = "bakthatunittest"
+        test_key = "bakthat-unittest"
+        test_key_enc = "bakthat-unittest-testenc"
         test_key2 = "itshouldfail"
+        test_password = "bakthat-password"
         kv.set_key(test_key, test_string)
+        kv.set_key(test_key_enc, test_string, password=test_password)
         self.assertEqual(test_string, kv.get_key(test_key))
-
+        self.assertEqual(test_string, kv.get_key(test_key_enc, password=test_password))
         #from urllib2 import urlopen, HTTPError
         #test_url = kv.get_key_url(test_key, 10)
         #self.assertEqual(json.loads(urlopen(test_url).read()), test_string)
@@ -51,8 +54,10 @@ class BakthatTestCase(unittest.TestCase):
         #    urlopen(test_url).read()
 
         kv.delete_key(test_key)
+        kv.delete_key(test_key_enc)
         self.assertEqual(kv.get_key(test_key), None)
         self.assertEqual(kv.get_key(test_key2), None)
+
 
     def test_s3_backup_restore(self):
         backup_data = bakthat.backup(self.test_file.name, "s3", password="")

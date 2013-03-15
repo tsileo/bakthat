@@ -464,7 +464,7 @@ def restore(filename, destination=DEFAULT_DESTINATION, profile="default", **kwar
     log.info("Restoring " + key_name)
 
     # Asking password before actually download to avoid waiting
-    if key_name and key_name.endswith(".enc"):
+    if key_name and backup.is_encrypted():
         password = kwargs.get("password")
         if not password:
             password = getpass()
@@ -482,7 +482,7 @@ def restore(filename, destination=DEFAULT_DESTINATION, profile="default", **kwar
         # If it's a job_check call, we return Glacier job data
         return out
 
-    if out and key_name.endswith(".enc"):
+    if out and backup.is_encrypted():
         log.info("Decrypting...")
         decrypted_out = tempfile.TemporaryFile()
         decrypt(out, decrypted_out, password)

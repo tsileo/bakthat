@@ -43,7 +43,14 @@ Helpers
 KeyValue
 ~~~~~~~~
 
-KeyValue is a "key value" store that allows you to store/retrieve string on Amazon S3.
+KeyValue is a simple "key value store" that allows you to quickly store/retrieve strings/objects on Amazon S3.
+All values are serialized with json, so **you can directly backup any json serializable value**.
+
+It can also takes care of compressing (with gzip) and encrypting (optionnal).
+
+Compression in enabled by default, you can disable it by passing compress=False when setting a key.
+
+Also, backups stored with KeyValue can be restored with bakthat restore and show up in bakthat show.
 
 .. code-block:: python
 
@@ -59,13 +66,19 @@ KeyValue is a "key value" store that allows you to store/retrieve string on Amaz
     kv = KeyValue(conf=bakthat_conf)
 
     mydata = {"some": "data"}
-    kv.set_key("mykey", json.dumps(mydata))
+    kv.set_key("mykey", mydata)
 
     mydata_restored = kv.get_key("mykey")
 
     data_url = kv.get_key_url("mykey", 60)  # url expires in 60 secondes
 
     kv.delete_key("mykey")
+
+    kv.set_key("my_encrypted_key", "myvalue", password="mypassword")
+    kv.get_key("my_encrypted_key", password="mypassword")
+
+    # You can also disable gzip compression if you want:
+    kv.set_key("my_non_compressed_key", {"my": "data"}, compress=False)
 
 
 BakHelper

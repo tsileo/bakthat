@@ -108,6 +108,12 @@ class Backups(BaseModel):
         self.last_updated = int(datetime.utcnow().strftime("%s"))
         self.save()
 
+    def is_encrypted(self):
+        return self.stored_filename.endswith(".enc") or self.metadata.get("is_enc")
+
+    def is_gzipped(self):
+        return self.metadata.get("is_gzipped")
+
     @classmethod
     def upsert(cls, **backup):
         q = Backups.select()

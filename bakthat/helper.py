@@ -10,6 +10,7 @@ import json
 from StringIO import StringIO
 from gzip import GzipFile
 
+from beefish import encrypt, decrypt
 from boto.s3.key import Key
 
 import bakthat
@@ -30,7 +31,7 @@ class KeyValue(S3Backend):
         S3Backend.__init__(self, conf, profile)
         self.profile = profile
 
-    def set_key(self, keyname, value, compress=True):
+    def set_key(self, keyname, value, **kwargs):
         """Store a string as keyname in S3.
 
         :type keyname: str
@@ -40,7 +41,7 @@ class KeyValue(S3Backend):
         :param value: Value to save, will be json encoded.
 
         :type value: bool
-        :param compress: Compress content with gzip,
+        :keyword compress: Compress content with gzip,
             True by default
         """
         k = Key(self.bucket)
@@ -54,20 +55,28 @@ class KeyValue(S3Backend):
                       backend="s3",
                       is_deleted=False,
                       tags="",
-                      metadata={"KeyValue": True})
+                      metadata={"KeyValue": True,
+                                "is_enc": False,
+                                "is_gzipped": False})
 
-        actual_value = json.dumps(value)
+        fileobj = StringIO(json.dumps(value))
 
-        if compress:
+        if kwargs.get("compress", True):
+            backup["metadata"]["is_gzipped"] = True
             out = StringIO()
             f = GzipFile(fileobj=out, mode="w")
-            f.write(actual_value)
+            f.write(fileobj.getvalue())
             f.close()
+            fileobj = StringIO(out.getvalue())
 
-            actual_value = out.getvalue()
-
+        password = kwargs.get("password")
+        if password:
+            backup["metadata"]["is_enc"] = True
+            out = StringIO()
+            encrypt(fileobj, out, password)
+            fileobj = out
         # Creating the object on S3
-        k.set_contents_from_string(actual_value)
+        k.set_contents_from_string(fileobj.getvalue())
         k.set_acl("private")
         backup["size"] = k.size
 
@@ -76,14 +85,14 @@ class KeyValue(S3Backend):
         backup["backend_hash"] = hashlib.sha512(access_key + container_key).hexdigest()
         Backups.upsert(**backup)
 
-    def get_key(self, keyname, default=None):
+    def get_key(self, keyname, **kwargs):
         """Return the object stored under keyname.
 
         :type keyname: str
         :param keyname: Key name
 
         :type default: str
-        :param default: Default value if key name does not exist, None by default
+        :keyword default: Default value if key name does not exist, None by default
 
         :rtype: str
         :return: The key content as string, or default value.
@@ -91,12 +100,22 @@ class KeyValue(S3Backend):
         k = Key(self.bucket)
         k.key = keyname
         if k.exists():
-            content = k.get_contents_as_string()
-            if content.startswith("\x1f\x8b\x08\x00"):
-                with GzipFile(fileobj=StringIO(content), mode="r") as f:
-                    content = f.read()
-            return json.loads(content)
-        return default
+            backup = Backups.get(Backups.stored_filename % keyname, Backups.backend == "s3")
+            fileobj = StringIO(k.get_contents_as_string())
+
+            if backup.is_encrypted():
+                out = StringIO()
+                decrypt(fileobj, out, kwargs.get("password"))
+                fileobj = out
+                fileobj.seek(0)
+
+            if backup.is_gzipped():
+                f = GzipFile(fileobj=fileobj, mode="r")
+                out = f.read()
+                f.close()
+                fileobj = StringIO(out)
+            return json.loads(fileobj.getvalue())
+        return kwargs.get("default")
 
     def delete_key(self, keyname):
         """Delete the given key.
