@@ -87,8 +87,6 @@ class BakSyncer():
         sync_ts = r.json().get("sync_ts")
         for newbackup in to_insert_in_bakthat:
             sqlite_backup = Backups.match_filename(newbackup["stored_filename"], newbackup["backend"])
-            print sqlite_backup
-            print sqlite_backup._data
             if sqlite_backup and newbackup["last_updated"] > sqlite_backup.last_updated:
                     log.debug("Upsert {0}".format(newbackup))
                     Backups.upsert(**newbackup)
