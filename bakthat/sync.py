@@ -89,12 +89,12 @@ class BakSyncer():
             sqlite_backup = Backups.match_filename(newbackup["stored_filename"], newbackup["backend"])
             print sqlite_backup
             print sqlite_backup._data
-            if sqlite_backup:
+            if sqlite_backup and newbackup["last_updated"] > sqlite_backup.last_updated:
+                    log.debug("Upsert {0}".format(newbackup))
+                    Backups.upsert(**newbackup)
+            elif not sqlite_backup:
                 log.debug("Create backup {0}".format(newbackup))
                 Backups.create(**newbackup)
-            elif newbackup["last_updated"] > sqlite_backup.last_updated:
-                log.debug("Upsert {0}".format(newbackup))
-                Backups.upsert(**newbackup)
 
         Config.set_key("sync_ts", sync_ts)
 
