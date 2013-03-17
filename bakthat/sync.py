@@ -65,9 +65,7 @@ class BakSyncer():
         It sends the last server sync timestamp along with data updated since last sync.
         Then the server return backups that have been updated on the server since last sync.
 
-        Both side (bakthat and the sync server) make upserts of the latest data avaible:
-        - if it doesn't exist yet, it will be created.
-        - if it has been modified (e.g deleted, since it's the only action we can take) we update it.
+        On both sides, backups are either created if they don't exists or updated if the incoming version is newer.
         """
         log.debug("Start syncing")
 
@@ -88,8 +86,13 @@ class BakSyncer():
         to_insert_in_bakthat = r.json().get("to_insert_in_bakthat")
         sync_ts = r.json().get("sync_ts")
         for newbackup in to_insert_in_bakthat:
-            log.debug("Upsert {0}".format(newbackup))
-            Backups.upsert(**newbackup)
+            sqlite_backup = Backups.match_filename(newbackup["stored_filename"])
+            if sqlite_backup:
+                log.debug("Create backup {0}".format(newbackup))
+                Backups.create(**newbackup)
+            elif newbackup["last_updated"] > sqlite_backup.last_updated:
+                log.debug("Upsert {0}".format(newbackup))
+                Backups.upsert(**newbackup)
 
         Config.set_key("sync_ts", sync_ts)
 
