@@ -95,6 +95,11 @@ class BakSyncer():
 
         log.debug("Sync succcesful")
 
+    def reset_sync(self):
+        log.debug("reset sync")
+        Config.set_key("sync_ts", 0)
+        Config.set_key("client_id", None)
+
     def sync_auto(self):
         """Trigger sync if autosync is enabled."""
         if config.get("sync", {}).get("auto", False):

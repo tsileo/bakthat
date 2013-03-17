@@ -556,10 +556,17 @@ def delete(filename, destination=DEFAULT_DESTINATION, profile="default", **kwarg
 
 
 @app.cmd(help="Trigger synchronization")
-def synchronize(**kwargs):
+def sync(**kwargs):
     """Trigger synchronization."""
     conf = kwargs.get("conf")
     BakSyncer(conf).sync()
+
+
+@app.cmd(help="Reset synchronization")
+def reset_sync(**kwargs):
+    """Reset synchronization."""
+    conf = kwargs.get("conf")
+    BakSyncer(conf).reset_sync()
 
 
 @app.cmd(help="List stored backups.")
