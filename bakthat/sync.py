@@ -86,7 +86,7 @@ class BakSyncer():
         to_insert_in_bakthat = r.json().get("to_insert_in_bakthat")
         sync_ts = r.json().get("sync_ts")
         for newbackup in to_insert_in_bakthat:
-            sqlite_backup = Backups.match_filename(newbackup["stored_filename"], newbackup["backend"], profile=self.profile)
+            sqlite_backup = Backups.match_filename(newbackup["stored_filename"], newbackup["backend"])
             if sqlite_backup:
                 log.debug("Create backup {0}".format(newbackup))
                 Backups.create(**newbackup)
