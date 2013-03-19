@@ -85,9 +85,9 @@ class BakSyncer():
         log.debug("Sync result: {0}".format(r.json()))
         to_insert_in_bakthat = r.json().get("updated", [])
         sync_ts = r.json().get("sync_ts")
-        log.info(r.json())
         for newbackup in to_insert_in_bakthat:
             log.debug("Upsert {0}".format(newbackup))
+            Backups.upsert(**newbackup)
 
         Config.set_key("sync_ts", sync_ts)
 
