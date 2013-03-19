@@ -73,7 +73,7 @@ class BakSyncer():
 
         last_sync_ts = Config.get_key("sync_ts", 0)
         to_insert_in_mongo = [b._data for b in Backups.search(last_updated_gt=last_sync_ts)]
-        data = dict(sync_ts=last_sync_ts, to_insert_in_mongo=to_insert_in_mongo)
+        data = dict(sync_ts=last_sync_ts, new=to_insert_in_mongo)
         r_kwargs = self.request_kwargs.copy()
         log.debug("Initial payload: {0}".format(data))
         r_kwargs.update({"data": json.dumps(data)})
@@ -83,16 +83,10 @@ class BakSyncer():
             return
 
         log.debug("Sync result: {0}".format(r.json()))
-        to_insert_in_bakthat = r.json().get("to_insert_in_bakthat")
+        to_insert_in_bakthat = r.json().get("updated")
         sync_ts = r.json().get("sync_ts")
         for newbackup in to_insert_in_bakthat:
-            sqlite_backup = Backups.match_filename(newbackup["stored_filename"], newbackup["backend"])
-            if sqlite_backup and newbackup["last_updated"] > sqlite_backup.last_updated:
-                    log.debug("Upsert {0}".format(newbackup))
-                    Backups.upsert(**newbackup)
-            elif not sqlite_backup:
-                log.debug("Create backup {0}".format(newbackup))
-                Backups.create(**newbackup)
+            log.debug("Upsert {0}".format(newbackup))
 
         Config.set_key("sync_ts", sync_ts)
 
