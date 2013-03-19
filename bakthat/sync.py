@@ -77,7 +77,7 @@ class BakSyncer():
         r_kwargs = self.request_kwargs.copy()
         log.debug("Initial payload: {0}".format(data))
         r_kwargs.update({"data": json.dumps(data)})
-        r = requests.post(self.get_resource("backups/sync/status"), **r_kwargs)
+        r = requests.post(self.get_resource("backups/sync"), **r_kwargs)
         if r.status_code != 200:
             log.error("An error occured during sync: {0}".format(r.text))
             return
