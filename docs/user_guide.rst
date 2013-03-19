@@ -36,7 +36,7 @@ Backup
     optional arguments:
       -h, --help            show this help message and exit
       -d DESTINATION, --destination DESTINATION
-                            s3|glacier
+                            s3|glacier|swift
       --prompt PROMPT       yes|no
       -t TAGS, --tags TAGS  space separated tags
       -p PROFILE, --profile PROFILE
@@ -284,6 +284,33 @@ Once your profile is configured, you can use it with **--profile**/**-p** argume
 
     $ bakthat backup -p myprofile
     $ bakthat show -p myprofile
+
+
+OpenStack Swift support
+~~~~~~~~~~~~~~~~~~~~~~~
+If you use OpenStack Swift as backend, **auth_version** and **auth_url** key are required in configuration.
+Following are sample configurations both temp_auth and keystone auth.
+
+.. code-block:: yaml
+
+    temp_auth:
+      access_key: ACCOUNT:USER
+      secret_key: YOUR_SECRET_KEY
+      region_name: 
+      glacier_vault: 
+      s3_bucket: mybucket
+      default_destination: swift
+      auth_url: https://<SWIFT_FQDN>/auth/v1.0
+      auth_version: '1'
+    keystone:
+      access_key: ACCOUNT:USER
+      secret_key: YOUR_SECRET_KEY
+      region_name: 
+      glacier_vault: 
+      s3_bucket: mybucket
+      default_destination: swift
+      auth_url: https://<KEYSTONE_FQDN>/v2.0
+      auth_version: '2'
 
 .. _stored-metadata:
 

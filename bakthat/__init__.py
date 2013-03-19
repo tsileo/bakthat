@@ -20,7 +20,7 @@ import aaargh
 import grandfatherson
 from byteformat import ByteFormatter
 
-from bakthat.backends import GlacierBackend, S3Backend, RotationConfig
+from bakthat.backends import GlacierBackend, S3Backend, RotationConfig, SwiftBackend
 from bakthat.conf import config, DEFAULT_DESTINATION, DEFAULT_LOCATION, CONFIG_FILE
 from bakthat.utils import _interval_string_to_seconds
 from bakthat.models import Backups, Inventory
@@ -35,7 +35,7 @@ log = logging.getLogger()
 if not log.handlers:
     logging.basicConfig(level=logging.INFO, format='%(message)s')
 
-STORAGE_BACKEND = dict(s3=S3Backend, glacier=GlacierBackend)
+STORAGE_BACKEND = dict(s3=S3Backend, glacier=GlacierBackend, swift=SwiftBackend)
 
 
 def _get_store_backend(conf, destination=DEFAULT_DESTINATION, profile="default"):
@@ -82,7 +82,7 @@ def match_filename(filename, destination=DEFAULT_DESTINATION, conf=None, profile
 @app.cmd(help="Delete backups older than the given interval string.")
 @app.cmd_arg('filename', type=str, help="Filename to delete")
 @app.cmd_arg('interval', type=str, help="Interval string like 1M, 1W, 1M3W4h2s")
-@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier")
+@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier|swift")
 @app.cmd_arg('-p', '--profile', type=str, default="default", help="profile name (default by default)")
 def delete_older_than(filename, interval, destination=DEFAULT_DESTINATION, profile="default", **kwargs):
     """Delete backups matching the given filename older than the given interval string.
@@ -95,7 +95,7 @@ def delete_older_than(filename, interval, destination=DEFAULT_DESTINATION, profi
         (s => seconds, m => minutes, h => hours, D => days, W => weeks, M => months, Y => Years).
 
     :type destination: str
-    :param destination: glacier|s3
+    :param destination: glacier|s3|swift
 
     :type conf: dict
     :keyword conf: Override/set AWS configuration.
@@ -126,7 +126,7 @@ def delete_older_than(filename, interval, destination=DEFAULT_DESTINATION, profi
 
 @app.cmd(help="Rotate backups using Grandfather-father-son backup rotation scheme.")
 @app.cmd_arg('filename', type=str)
-@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier", default=DEFAULT_DESTINATION)
+@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier|swift", default=DEFAULT_DESTINATION)
 @app.cmd_arg('-p', '--profile', type=str, default="default", help="profile name (default by default)")
 def rotate_backups(filename, destination=DEFAULT_DESTINATION, profile="default", **kwargs):
     """Rotate backup using grandfather-father-son rotation scheme.
@@ -135,7 +135,7 @@ def rotate_backups(filename, destination=DEFAULT_DESTINATION, profile="default",
     :param filename: File/directory name.
 
     :type destination: str
-    :param destination: s3|glacier
+    :param destination: s3|glacier|swift
 
     :type conf: dict
     :keyword conf: Override/set AWS configuration.
@@ -192,7 +192,7 @@ def rotate_backups(filename, destination=DEFAULT_DESTINATION, profile="default",
 
 @app.cmd(help="Backup a file or a directory, backup the current directory if no arg is provided.")
 @app.cmd_arg('filename', type=str, default=os.getcwd(), nargs="?")
-@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier", default=DEFAULT_DESTINATION)
+@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier|swift", default=DEFAULT_DESTINATION)
 @app.cmd_arg('--prompt', type=str, help="yes|no", default="yes")
 @app.cmd_arg('-t', '--tags', type=str, help="space separated tags", default="")
 @app.cmd_arg('-p', '--profile', type=str, default="default", help="profile name (default by default)")
@@ -203,7 +203,7 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
     :param filename: File/directory to backup.
 
     :type destination: str
-    :param destination: s3|glacier
+    :param destination: s3|glacier|swift
 
     :type prompt: str
     :param prompt: Disable password promp, disable encryption,
@@ -326,7 +326,7 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
 
 @app.cmd(help="Give informations about stored filename, current directory if no arg is provided.")
 @app.cmd_arg('filename', type=str, default=os.getcwd(), nargs="?")
-@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier")
+@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier|swift")
 @app.cmd_arg('-p', '--profile', type=str, default="default", help="profile name (default by default)")
 def info(filename=os.getcwd(), destination=None, profile="default", **kwargs):
     conf = kwargs.get("conf", None)
@@ -380,10 +380,10 @@ def configure(profile="default"):
             default_destination = raw_input("Default destination ({0}): ".format(DEFAULT_DESTINATION))
             if default_destination:
                 default_destination = default_destination.lower()
-                if default_destination in ("s3", "glacier"):
+                if default_destination in ("s3", "glacier", "swift"):
                     break
                 else:
-                    log.error("Invalid default_destination, should be s3 or glacier, try again.")
+                    log.error("Invalid default_destination, should be s3 or glacier, swift, try again.")
             else:
                 default_destination = DEFAULT_DESTINATION
                 break
@@ -393,6 +393,10 @@ def configure(profile="default"):
         if not region_name:
             region_name = DEFAULT_LOCATION
         new_conf[profile]["region_name"] = region_name
+
+        if default_destination in ("swift"):
+            new_conf[profile]["auth_version"] = raw_input("Swift Auth Version: ")
+            new_conf[profile]["auth_url"] = raw_input("Swift Auth URL: ")
 
         yaml.dump(new_conf, open(CONFIG_FILE, "w"), default_flow_style=False)
 
@@ -430,7 +434,7 @@ def configure_backups_rotation(profile="default"):
 
 @app.cmd(help="Restore backup in the current directory.")
 @app.cmd_arg('filename', type=str)
-@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier", default=DEFAULT_DESTINATION)
+@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier|swift", default=DEFAULT_DESTINATION)
 @app.cmd_arg('-p', '--profile', type=str, default="default", help="profile name (default by default)")
 def restore(filename, destination=DEFAULT_DESTINATION, profile="default", **kwargs):
     """Restore backup in the current working directory.
@@ -439,7 +443,7 @@ def restore(filename, destination=DEFAULT_DESTINATION, profile="default", **kwar
     :param filename: File/directory to backup.
 
     :type destination: str
-    :param destination: s3|glacier
+    :param destination: s3|glacier|swift
 
     :type profile: str
     :param profile: Profile name (default by default).
@@ -508,7 +512,7 @@ def restore(filename, destination=DEFAULT_DESTINATION, profile="default", **kwar
 
 @app.cmd(help="Delete a backup.")
 @app.cmd_arg('filename', type=str)
-@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier", default=DEFAULT_DESTINATION)
+@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier|swift", default=DEFAULT_DESTINATION)
 @app.cmd_arg('-p', '--profile', type=str, default="default", help="profile name (default by default)")
 def delete(filename, destination=DEFAULT_DESTINATION, profile="default", **kwargs):
     """Delete a backup.
@@ -517,7 +521,7 @@ def delete(filename, destination=DEFAULT_DESTINATION, profile="default", **kwarg
     :param filename: stored filename to delete.
 
     :type destination: str
-    :param destination: glacier|s3
+    :param destination: glacier|s3|swift
 
     :type profile: str
     :param profile: Profile name (default by default).
@@ -573,7 +577,7 @@ def reset_sync(**kwargs):
 
 
 @app.cmd(help="List stored backups.")
-@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier")
+@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier|swift")
 @app.cmd_arg('-p', '--profile', type=str, default="default", help="profile name (default by default)")
 def ls(destination=None, profile="default", **kwargs):
     conf = kwargs.get("conf", None)
