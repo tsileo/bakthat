@@ -86,6 +86,13 @@ Bakthat Python API
 Changelog
 ---------
 
+0.4.5
+~~~~~
+
+**Mars 19 2013**
+
+- bugfix configure (cancel of configure cmd cause empty yml), thanks to @yoyama
+
 0.4.4
 ~~~~~
 
@@ -172,6 +179,7 @@ Contributors
 - Sławomir Żak
 - Andreyev Dias de Melo
 - Jake McGraw
+- You Yamagata
 
 
 License (MIT)

@@ -6,6 +6,7 @@ from datetime import datetime
 from getpass import getpass
 import logging
 import hashlib
+import socket
 import json
 import re
 import mimetypes
@@ -298,7 +299,8 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
 
     backup_data["tags"] = tags
 
-    backup_data["metadata"] = dict(is_enc=bakthat_encryption)
+    backup_data["metadata"] = dict(is_enc=bakthat_encryption,
+                                   client=socket.gethostname())
     backup_data["stored_filename"] = stored_filename
 
     access_key = storage_backend.conf.get("access_key")
@@ -365,38 +367,39 @@ def _display_backups(backups):
 @app.cmd(help="Set AWS S3/Glacier credentials.")
 @app.cmd_arg('-p', '--profile', type=str, default="default", help="profile name (default by default)")
 def configure(profile="default"):
-    new_conf = config.copy()
-    new_conf[profile] = config.get(profile, {})
+    try:
+        new_conf = config.copy()
+        new_conf[profile] = config.get(profile, {})
 
-    new_conf_file = open(CONFIG_FILE, "w")
+        new_conf[profile]["access_key"] = raw_input("AWS Access Key: ")
+        new_conf[profile]["secret_key"] = raw_input("AWS Secret Key: ")
+        new_conf[profile]["s3_bucket"] = raw_input("S3 Bucket Name: ")
+        new_conf[profile]["glacier_vault"] = raw_input("Glacier Vault Name: ")
 
-    new_conf[profile]["access_key"] = raw_input("AWS Access Key: ")
-    new_conf[profile]["secret_key"] = raw_input("AWS Secret Key: ")
-    new_conf[profile]["s3_bucket"] = raw_input("S3 Bucket Name: ")
-    new_conf[profile]["glacier_vault"] = raw_input("Glacier Vault Name: ")
-
-    while 1:
-        default_destination = raw_input("Default destination ({0}): ".format(DEFAULT_DESTINATION))
-        if default_destination:
-            default_destination = default_destination.lower()
-            if default_destination in ("s3", "glacier"):
-                break
+        while 1:
+            default_destination = raw_input("Default destination ({0}): ".format(DEFAULT_DESTINATION))
+            if default_destination:
+                default_destination = default_destination.lower()
+                if default_destination in ("s3", "glacier"):
+                    break
+                else:
+                    log.error("Invalid default_destination, should be s3 or glacier, try again.")
             else:
-                log.error("Invalid default_destination, should be s3 or glacier, try again.")
-        else:
-            default_destination = DEFAULT_DESTINATION
-            break
+                default_destination = DEFAULT_DESTINATION
+                break
 
-    new_conf[profile]["default_destination"] = default_destination
-    region_name = raw_input("Region Name ({0}): ".format(DEFAULT_LOCATION))
-    if not region_name:
-        region_name = DEFAULT_LOCATION
-    new_conf[profile]["region_name"] = region_name
+        new_conf[profile]["default_destination"] = default_destination
+        region_name = raw_input("Region Name ({0}): ".format(DEFAULT_LOCATION))
+        if not region_name:
+            region_name = DEFAULT_LOCATION
+        new_conf[profile]["region_name"] = region_name
 
-    yaml.dump(new_conf, new_conf_file, default_flow_style=False)
+        yaml.dump(new_conf, open(CONFIG_FILE, "w"), default_flow_style=False)
 
-    log.info("Config written in %s" % CONFIG_FILE)
-    log.info("Run bakthat configure_backups_rotation if needed.")
+        log.info("Config written in %s" % CONFIG_FILE)
+        log.info("Run bakthat configure_backups_rotation if needed.")
+    except KeyboardInterrupt:
+        log.error("Cancelled by user")
 
 
 @app.cmd(help="Configure backups rotation")
