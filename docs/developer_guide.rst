@@ -43,6 +43,8 @@ Helpers
 KeyValue
 ~~~~~~~~
 
+.. versionadded:: 0.4.5
+
 KeyValue is a simple "key value store" that allows you to quickly store/retrieve strings/objects on Amazon S3.
 All values are serialized with json, so **you can directly backup any json serializable value**.
 

@@ -89,9 +89,11 @@ Changelog
 0.4.5
 ~~~~~
 
-**Mars 19 2013**
+**Mars 20 2013**
 
 - bugfix configure (cancel of configure cmd cause empty yml), thanks to @yoyama
+- new bakthat.helper.KeyValue
+- BakSyncer improvement
 
 0.4.4
 ~~~~~
