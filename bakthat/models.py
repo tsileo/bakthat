@@ -66,19 +66,22 @@ class Backups(BaseModel):
         if isinstance(destination, (str, unicode)):
             destination = [destination]
 
-        profile = config.get(kwargs.get("profile", "default"))
-
-        s3_key = hashlib.sha512(profile.get("access_key") +
-                                profile.get("s3_bucket")).hexdigest()
-        glacier_key = hashlib.sha512(profile.get("access_key") +
-                                     profile.get("glacier_vault")).hexdigest()
-
         query = "*{0}*".format(query)
         wheres = []
+
+        if kwargs.get("profile"):
+            profile = config.get(kwargs.get("profile"))
+
+            s3_key = hashlib.sha512(profile.get("access_key") +
+                                    profile.get("s3_bucket")).hexdigest()
+            glacier_key = hashlib.sha512(profile.get("access_key") +
+                                         profile.get("glacier_vault")).hexdigest()
+
+            wheres.append(Backups.backend_hash << [s3_key, glacier_key])
+
         wheres.append(Backups.filename % query |
                       Backups.stored_filename % query)
         wheres.append(Backups.backend << destination)
-        wheres.append(Backups.backend_hash << [s3_key, glacier_key])
         wheres.append(Backups.is_deleted == False)
 
         older_than = kwargs.get("older_than")
