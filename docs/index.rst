@@ -35,6 +35,12 @@ Requirements
 * `pyyaml <http://pyyaml.org>`_
 * `sh <http://amoffat.github.com/sh/>`_
 
+If you use OpenStack Swift, following additional packages are also required.
+
+* `python-swiftclient <https://pypi.python.org/pypi/python-swiftclient>`_
+* `python-keystoneclient <https://pypi.python.org/pypi/python-keystoneclient/>`_
+
+
 
 Overview
 --------

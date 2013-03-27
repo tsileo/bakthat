@@ -287,3 +287,55 @@ class GlacierBackend(BakthatBackend):
                 d["archives"] = archives
         except Exception, exc:
             log.exception(exc)
+
+class SwiftBackend(BakthatBackend):
+    """Backend to handle OpenStack Swift upload/download."""
+    def __init__(self, conf={}, profile="default"):
+        BakthatBackend.__init__(self, conf, profile)
+
+        from swiftclient import Connection, ClientException
+        
+        self.con = Connection(self.conf["auth_url"], self.conf["access_key"], 
+                              self.conf["secret_key"],
+                              auth_version=self.conf["auth_version"],
+                              insecure=True)
+
+        region_name = self.conf["region_name"]
+        if region_name == DEFAULT_LOCATION:
+            region_name = ""
+
+        try:
+            self.con.head_container(self.conf["s3_bucket"])
+        except ClientException, e:
+            self.con.put_container(self.conf["s3_bucket"])
+
+        self.container = self.conf["s3_bucket"]
+        self.container_key = "s3_bucket"
+
+    def download(self, keyname):
+        headers, data = self.con.get_object(self.container, keyname,
+                                            resp_chunk_size=65535)
+
+        encrypted_out = tempfile.TemporaryFile()
+        for chunk in data:
+            encrypted_out.write(chunk)
+        encrypted_out.seek(0)
+
+        return encrypted_out
+
+    def cb(self, complete, total):
+        """Upload callback to log upload percentage."""
+        """Swift client does not support callbak"""
+        percent = int(complete * 100.0 / total)
+        log.info("Upload completion: {0}%".format(percent))
+
+    def upload(self, keyname, filename, cb=True):
+        fp = open(filename, "rb")
+        self.con.put_object(self.container, keyname, fp)
+
+    def ls(self):
+        headers, objects = self.con.get_container(self.conf["s3_bucket"])
+        return [key['name'] for key in objects]
+
+    def delete(self, keyname):
+        self.con.delete_object(self.container, keyname)
