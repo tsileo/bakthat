@@ -311,7 +311,7 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
     storage_backend.upload(stored_filename, outname)
 
     # We only remove the file if the archive is created by bakthat
-    if bakthat_encryption:
+    if bakthat_compression or bakthat_encryption:
         os.remove(outname)
 
     log.debug(backup_data)
