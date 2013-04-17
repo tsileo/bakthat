@@ -7,3 +7,4 @@ PyYaml
 byteformat
 pycrypto
 requests
+sh
