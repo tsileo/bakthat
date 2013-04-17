@@ -253,7 +253,7 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
                 return
 
     # Check if compression is disabled on the configuration.
-    if not config.get('compress', True):
+    if not config.get(profile, {}).get('compress', True):
         log.info("Compression disabled")
         outname = filename
         with open(outname) as outfile:
