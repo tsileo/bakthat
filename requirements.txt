@@ -1,0 +1,9 @@
+peewee
+beefish
+boto
+aaargh
+grandfatherson
+PyYaml
+byteformat
+pycrypto
+requests
