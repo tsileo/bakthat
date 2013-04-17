@@ -252,8 +252,15 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
                 log.error("Password confirmation doesn't match")
                 return
 
+    # Check if compression is disabled on the configuration.
+    if not config.get('compress', True):
+        log.info("Compression disabled")
+        outname = filename
+        with open(outname) as outfile:
+            backup_data["size"] = os.fstat(outfile.fileno()).st_size
+        bakthat_compression = False
     # Check if the file is not already compressed
-    if mimetypes.guess_type(arcname) == ('application/x-tar', 'gzip'):
+    elif mimetypes.guess_type(arcname) == ('application/x-tar', 'gzip'):
         log.info("File already compressed")
         outname = filename
 
