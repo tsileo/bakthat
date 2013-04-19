@@ -182,6 +182,7 @@ Contributors
 - Andreyev Dias de Melo
 - Jake McGraw
 - You Yamagata
+- Jordi Funollet
 
 
 License (MIT)
