@@ -232,6 +232,15 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
     storage_backend, destination = _get_store_backend(conf, destination, profile)
     backup_file_fmt = "{0}.{1}.tgz"
 
+    # Check if compression is disabled on the configuration.
+    if conf:
+        compress = conf.get("compress")
+    else:
+        compress = config.get(profile).get("compress", True)
+
+    if not compress:
+        backup_file_fmt = "{0}.{1}"
+
     log.info("Backing up " + filename)
     arcname = filename.strip('/').split('/')[-1]
     now = datetime.utcnow()
@@ -254,13 +263,13 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
                 log.error("Password confirmation doesn't match")
                 return
 
-    # Check if compression is disabled on the configuration.
-    if not config.get(profile, {}).get('compress', True):
+    if not compress:
         log.info("Compression disabled")
         outname = filename
         with open(outname) as outfile:
             backup_data["size"] = os.fstat(outfile.fileno()).st_size
         bakthat_compression = False
+
     # Check if the file is not already compressed
     elif mimetypes.guess_type(arcname) == ('application/x-tar', 'gzip'):
         log.info("File already compressed")
@@ -504,7 +513,7 @@ def restore(filename, destination=None, profile="default", **kwargs):
         decrypt(out, decrypted_out, password)
         out = decrypted_out
 
-    if out:
+    if out and (key_name.endswith(".tgz") or key_name.endswith(".tgz.enc")):
         log.info("Uncompressing...")
         out.seek(0)
         if not backup.metadata.get("KeyValue"):
@@ -517,7 +526,13 @@ def restore(filename, destination=None, profile="default", **kwargs):
                     out.write(f.read())
 
         return True
+    elif out:
+        log.info("Backup is not compressed")
+        with open(backup.filename, "w") as restored:
+            out.seek(0)
+            restored.write(out.read())
 
+        return True
 
 @app.cmd(help="Delete a backup.")
 @app.cmd_arg('filename', type=str)
