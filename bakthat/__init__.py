@@ -38,24 +38,26 @@ if not log.handlers:
 STORAGE_BACKEND = dict(s3=S3Backend, glacier=GlacierBackend, swift=SwiftBackend)
 
 
-def _get_store_backend(conf, destination=DEFAULT_DESTINATION, profile="default"):
+def _get_store_backend(conf, destination=None, profile="default"):
+    if not conf:  # If not conf is defined, we load the profile conf
+        conf = config.get(profile)
     if not destination:
-        destination = config.get("aws", "default_destination")
-    return STORAGE_BACKEND[destination](conf, profile)
+        destination = conf.get("default_destination", DEFAULT_DESTINATION)
+    return STORAGE_BACKEND[destination](conf, profile), destination
 
 
-def _match_filename(filename, destination=DEFAULT_DESTINATION, conf=None, profile="default"):
+def _match_filename(filename, destination=None, conf=None, profile="default"):
     """Return all stored backups keys for a given filename."""
     if not filename:
         raise Exception("Filename can't be blank")
-    storage_backend = _get_store_backend(conf, destination, profile)
+    storage_backend, destination = _get_store_backend(conf, destination, profile)
 
     keys = [name for name in storage_backend.ls() if name.startswith(filename)]
     keys.sort(reverse=True)
     return keys
 
 
-def match_filename(filename, destination=DEFAULT_DESTINATION, conf=None, profile="default"):
+def match_filename(filename, destination=None, conf=None, profile="default"):
     """Return a list of dict with backup_name, date_component, and is_enc."""
     _keys = _match_filename(filename, destination, conf, profile)
     regex_key = re.compile(r"(?P<backup_name>.+)\.(?P<date_component>\d{14})\.tgz(?P<is_enc>\.enc)?")
@@ -82,9 +84,9 @@ def match_filename(filename, destination=DEFAULT_DESTINATION, conf=None, profile
 @app.cmd(help="Delete backups older than the given interval string.")
 @app.cmd_arg('filename', type=str, help="Filename to delete")
 @app.cmd_arg('interval', type=str, help="Interval string like 1M, 1W, 1M3W4h2s")
-@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier|swift")
+@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier|swift", default=None)
 @app.cmd_arg('-p', '--profile', type=str, default="default", help="profile name (default by default)")
-def delete_older_than(filename, interval, destination=DEFAULT_DESTINATION, profile="default", **kwargs):
+def delete_older_than(filename, interval, destination=None, profile="default", **kwargs):
     """Delete backups matching the given filename older than the given interval string.
 
     :type filename: str
@@ -105,7 +107,7 @@ def delete_older_than(filename, interval, destination=DEFAULT_DESTINATION, profi
 
     """
     conf = kwargs.get("conf")
-    storage_backend = _get_store_backend(conf, destination, profile)
+    storage_backend, destination = _get_store_backend(conf, destination, profile)
     interval_seconds = _interval_string_to_seconds(interval)
 
     deleted = []
@@ -126,9 +128,9 @@ def delete_older_than(filename, interval, destination=DEFAULT_DESTINATION, profi
 
 @app.cmd(help="Rotate backups using Grandfather-father-son backup rotation scheme.")
 @app.cmd_arg('filename', type=str)
-@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier|swift", default=DEFAULT_DESTINATION)
+@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier|swift", default=None)
 @app.cmd_arg('-p', '--profile', type=str, default="default", help="profile name (default by default)")
-def rotate_backups(filename, destination=DEFAULT_DESTINATION, profile="default", **kwargs):
+def rotate_backups(filename, destination=None, profile="default", **kwargs):
     """Rotate backup using grandfather-father-son rotation scheme.
 
     :type filename: str
@@ -157,7 +159,7 @@ def rotate_backups(filename, destination=DEFAULT_DESTINATION, profile="default",
 
     """
     conf = kwargs.get("conf", None)
-    storage_backend = _get_store_backend(conf, destination, profile)
+    storage_backend, destination = _get_store_backend(conf, destination, profile)
     rotate = RotationConfig(conf, profile)
     if not rotate:
         raise Exception("You must run bakthat configure_backups_rotation or provide rotation configuration.")
@@ -192,7 +194,7 @@ def rotate_backups(filename, destination=DEFAULT_DESTINATION, profile="default",
 
 @app.cmd(help="Backup a file or a directory, backup the current directory if no arg is provided.")
 @app.cmd_arg('filename', type=str, default=os.getcwd(), nargs="?")
-@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier|swift", default=DEFAULT_DESTINATION)
+@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier|swift", default=None)
 @app.cmd_arg('--prompt', type=str, help="yes|no", default="yes")
 @app.cmd_arg('-t', '--tags', type=str, help="space separated tags", default="")
 @app.cmd_arg('-p', '--profile', type=str, default="default", help="profile name (default by default)")
@@ -227,7 +229,7 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
 
     """
     conf = kwargs.get("conf", None)
-    storage_backend = _get_store_backend(conf, destination, profile)
+    storage_backend, destination = _get_store_backend(conf, destination, profile)
     backup_file_fmt = "{0}.{1}.tgz"
 
     log.info("Backing up " + filename)
@@ -326,11 +328,11 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
 
 @app.cmd(help="Give informations about stored filename, current directory if no arg is provided.")
 @app.cmd_arg('filename', type=str, default=os.getcwd(), nargs="?")
-@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier|swift")
+@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier|swift", default=None)
 @app.cmd_arg('-p', '--profile', type=str, default="default", help="profile name (default by default)")
 def info(filename=os.getcwd(), destination=None, profile="default", **kwargs):
     conf = kwargs.get("conf", None)
-    storage_backend = _get_store_backend(conf, destination, profile)
+    storage_backend, destination = _get_store_backend(conf, destination, profile)
     filename = filename.split("/")[-1]
     keys = match_filename(filename, destination if destination else DEFAULT_DESTINATION, profile)
     if not keys:
@@ -434,9 +436,9 @@ def configure_backups_rotation(profile="default"):
 
 @app.cmd(help="Restore backup in the current directory.")
 @app.cmd_arg('filename', type=str)
-@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier|swift", default=DEFAULT_DESTINATION)
+@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier|swift", default=None)
 @app.cmd_arg('-p', '--profile', type=str, default="default", help="profile name (default by default)")
-def restore(filename, destination=DEFAULT_DESTINATION, profile="default", **kwargs):
+def restore(filename, destination=None, profile="default", **kwargs):
     """Restore backup in the current working directory.
 
     :type filename: str
@@ -455,7 +457,7 @@ def restore(filename, destination=DEFAULT_DESTINATION, profile="default", **kwar
     :return: True if successful.
     """
     conf = kwargs.get("conf", None)
-    storage_backend = _get_store_backend(conf, destination, profile)
+    storage_backend, destination = _get_store_backend(conf, destination, profile)
 
     if not filename:
         log.error("No file to restore, use -f to specify one.")
@@ -512,9 +514,9 @@ def restore(filename, destination=DEFAULT_DESTINATION, profile="default", **kwar
 
 @app.cmd(help="Delete a backup.")
 @app.cmd_arg('filename', type=str)
-@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier|swift", default=DEFAULT_DESTINATION)
+@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier|swift", default=None)
 @app.cmd_arg('-p', '--profile', type=str, default="default", help="profile name (default by default)")
-def delete(filename, destination=DEFAULT_DESTINATION, profile="default", **kwargs):
+def delete(filename, destination=None, profile="default", **kwargs):
     """Delete a backup.
 
     :type filename: str
@@ -550,7 +552,7 @@ def delete(filename, destination=DEFAULT_DESTINATION, profile="default", **kwarg
 
     key_name = backup.stored_filename
 
-    storage_backend = _get_store_backend(conf, destination, profile)
+    storage_backend, destination = _get_store_backend(conf, destination, profile)
 
     log.info("Deleting {0}".format(key_name))
 
@@ -574,23 +576,6 @@ def reset_sync(**kwargs):
     """Reset synchronization."""
     conf = kwargs.get("conf")
     BakSyncer(conf).reset_sync()
-
-
-@app.cmd(help="List stored backups.")
-@app.cmd_arg('-d', '--destination', type=str, help="s3|glacier|swift")
-@app.cmd_arg('-p', '--profile', type=str, default="default", help="profile name (default by default)")
-def ls(destination=None, profile="default", **kwargs):
-    conf = kwargs.get("conf", None)
-    storage_backend = _get_store_backend(conf, destination, profile)
-
-    log.info(storage_backend.container)
-
-    ls_result = storage_backend.ls()
-
-    for filename in ls_result:
-        log.info(filename)
-
-    return ls_result
 
 
 @app.cmd(help="Show Glacier inventory from S3")
