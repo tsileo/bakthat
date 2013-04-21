@@ -103,7 +103,8 @@ class BakthatSwiftBackendTestCase(unittest.TestCase):
                                                profile=self.test_profile)
                         [0]["is_enc"])
 
-        bakthat.restore(self.test_filename, "swift", password=self.password)
+        bakthat.restore(self.test_filename, "swift", password=self.password,
+                                                profile=self.test_profile)
 
         restored_hash = hashlib.sha1(
             open(self.test_filename).read()).hexdigest()
