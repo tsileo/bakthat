@@ -2,7 +2,7 @@
 Bakthat
 =======
 
-Bakthat is a MIT licensed backup framework written in Python, it's both a command line tool and a Python module that helps you manage backups on Amazon S3/Glacier. It automatically compress, encrypt (symmetric encryption) and upload your files.
+Bakthat is a MIT licensed backup framework written in Python, it's both a command line tool and a Python module that helps you manage backups on Amazon S3/Glacier and OpenStack Swift. It automatically compress, encrypt (symmetric encryption) and upload your files.
 
 Here are some features:
 
@@ -85,6 +85,16 @@ Bakthat Python API
 
 Changelog
 ---------
+
+0.5.0
+~~~~~
+
+**April 21 2013**
+
+- New Swift backend, thanks to @yoyama
+- ls command removed in favor of the show command
+- Compression can now be disabled with the compress setting
+- Bugfix default destination 
 
 0.4.5
 ~~~~~

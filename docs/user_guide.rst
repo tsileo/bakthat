@@ -296,9 +296,13 @@ Once your profile is configured, you can use it with **--profile**/**-p** argume
     $ bakthat backup -p myprofile
     $ bakthat show -p myprofile
 
+.. _swift-support:
 
 OpenStack Swift support
 ~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 0.5.0
+
 If you use OpenStack Swift as backend, **auth_version** and **auth_url** key are required in configuration.
 Following are sample configurations both temp_auth and keystone auth.
 

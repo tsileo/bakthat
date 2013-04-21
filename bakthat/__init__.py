@@ -26,9 +26,9 @@ from bakthat.utils import _interval_string_to_seconds
 from bakthat.models import Backups, Inventory
 from bakthat.sync import BakSyncer
 
-__version__ = "0.4.5"
+__version__ = "0.5.0"
 
-app = aaargh.App(description="Compress, encrypt and upload files directly to Amazon S3/Glacier.")
+app = aaargh.App(description="Compress, encrypt and upload files directly to Amazon S3/Glacier/Swift.")
 
 log = logging.getLogger()
 
@@ -362,7 +362,7 @@ def info(filename=os.getcwd(), destination=None, profile="default", **kwargs):
 
 @app.cmd(help="Show backups list.")
 @app.cmd_arg('query', type=str, default="", help="search filename for query", nargs="?")
-@app.cmd_arg('-d', '--destination', type=str, default="", help="glacier|s3, default both")
+@app.cmd_arg('-d', '--destination', type=str, default="", help="glacier|s3|swift, show every destination by default")
 @app.cmd_arg('-t', '--tags', type=str, default="", help="tags space separated")
 @app.cmd_arg('-p', '--profile', type=str, default="default", help="profile name (all profiles are displayed by default)")
 def show(query="", destination="", tags="", profile="default", help="Profile, blank to show all"):
@@ -534,6 +534,7 @@ def restore(filename, destination=None, profile="default", **kwargs):
 
         return True
 
+
 @app.cmd(help="Delete a backup.")
 @app.cmd_arg('filename', type=str)
 @app.cmd_arg('-d', '--destination', type=str, help="s3|glacier|swift", default=None)
@@ -645,56 +646,6 @@ def restore_glacier_inventory(**kwargs):
     conf = kwargs.get("conf", None)
     glacier_backend = GlacierBackend(conf)
     glacier_backend.restore_inventory()
-
-
-@app.cmd()
-def upgrade_from_shelve():
-    if os.path.isfile(os.path.expanduser("~/.bakthat.db")):
-        glacier_backend = GlacierBackend()
-        glacier_backend.upgrade_from_shelve()
-
-        s3_backend = S3Backend()
-
-        regex_key = re.compile(r"(?P<backup_name>.+)\.(?P<date_component>\d{14})\.tgz(?P<is_enc>\.enc)?")
-
-        # old regex for backward compatibility (for files without dot before the date component).
-        old_regex_key = re.compile(r"(?P<backup_name>.+)(?P<date_component>\d{14})\.tgz(?P<is_enc>\.enc)?")
-
-        for generator, backend in [(s3_backend.ls(), "s3"), ([ivt.filename for ivt in Inventory.select()], "glacier")]:
-            for key in generator:
-                match = regex_key.match(key)
-                # Backward compatibility
-                if not match:
-                    match = old_regex_key.match(key)
-                if match:
-                    filename = match.group("backup_name")
-                    is_enc = bool(match.group("is_enc"))
-                    backup_date = int(datetime.strptime(match.group("date_component"), "%Y%m%d%H%M%S").strftime("%s"))
-                else:
-                    filename = key
-                    is_enc = False
-                    backup_date = 0
-                if backend == "s3":
-                    backend_hash = hashlib.sha512(s3_backend.conf.get("access_key") + \
-                                        s3_backend.conf.get(s3_backend.container_key)).hexdigest()
-                elif backend == "glacier":
-                    backend_hash = hashlib.sha512(glacier_backend.conf.get("access_key") + \
-                                        glacier_backend.conf.get(glacier_backend.container_key)).hexdigest()
-                new_backup = dict(backend=backend,
-                                  is_deleted=0,
-                                  backup_date=backup_date,
-                                  tags="",
-                                  stored_filename=key,
-                                  filename=filename,
-                                  last_updated=int(datetime.utcnow().strftime("%s")),
-                                  metadata=dict(is_enc=is_enc),
-                                  size=0,
-                                  backend_hash=backend_hash)
-                try:
-                    Backups.upsert(**new_backup)
-                except Exception, exc:
-                    print exc
-        os.remove(os.path.expanduser("~/.bakthat.db"))
 
 
 def main():

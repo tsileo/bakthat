@@ -127,8 +127,10 @@ class KeyValue(S3Backend):
         k.key = keyname
         if k.exists():
             k.delete()
-            backup = Backups.match_filename(keyname, "s3", profile=self.profile)
+        backup = Backups.match_filename(keyname, "s3", profile=self.profile)
+        if backup:
             backup.set_deleted()
+            return True
 
     def get_key_url(self, keyname, expires_in, method="GET"):
         """Generate a URL for the keyname object.
