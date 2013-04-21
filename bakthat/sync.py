@@ -26,10 +26,7 @@ def bakmanager_hook(conf, backup_data, key=None):
         if conf.get("bakmanager_token"):
             bak_backup = {"key": key, "host": socket.gethostname(), "size": backup_data["size"]}
             bak_payload = {"backup":  json.dumps(bak_backup)}
-            print bak_payload
-            print conf.get("bakmanager_token")
             r = requests.post("https://bakmanager.io/api/backups/", bak_payload, auth=(conf.get("bakmanager_token"), ""))
-            print r.json()
             r.raise_for_status()
         else:
             log.error("No bakmanager_token setting for the current profile.")
