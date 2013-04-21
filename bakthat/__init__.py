@@ -43,14 +43,14 @@ def _get_store_backend(conf, destination=None, profile="default"):
         conf = config.get(profile)
     if not destination:
         destination = conf.get("default_destination", DEFAULT_DESTINATION)
-    return STORAGE_BACKEND[destination](conf, profile), destination
+    return STORAGE_BACKEND[destination](conf, profile), destination, conf
 
 
 def _match_filename(filename, destination=None, conf=None, profile="default"):
     """Return all stored backups keys for a given filename."""
     if not filename:
         raise Exception("Filename can't be blank")
-    storage_backend, destination = _get_store_backend(conf, destination, profile)
+    storage_backend, destination, conf = _get_store_backend(conf, destination, profile)
 
     keys = [name for name in storage_backend.ls() if name.startswith(filename)]
     keys.sort(reverse=True)
@@ -107,7 +107,7 @@ def delete_older_than(filename, interval, destination=None, profile="default", *
 
     """
     conf = kwargs.get("conf")
-    storage_backend, destination = _get_store_backend(conf, destination, profile)
+    storage_backend, destination, conf = _get_store_backend(conf, destination, profile)
     interval_seconds = _interval_string_to_seconds(interval)
 
     deleted = []
@@ -159,7 +159,7 @@ def rotate_backups(filename, destination=None, profile="default", **kwargs):
 
     """
     conf = kwargs.get("conf", None)
-    storage_backend, destination = _get_store_backend(conf, destination, profile)
+    storage_backend, destination, conf = _get_store_backend(conf, destination, profile)
     rotate = RotationConfig(conf, profile)
     if not rotate:
         raise Exception("You must run bakthat configure_backups_rotation or provide rotation configuration.")
@@ -229,12 +229,12 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
 
     """
     conf = kwargs.get("conf", None)
-    storage_backend, destination = _get_store_backend(conf, destination, profile)
+    storage_backend, destination, conf = _get_store_backend(conf, destination, profile)
     backup_file_fmt = "{0}.{1}.tgz"
 
     # Check if compression is disabled on the configuration.
     if conf:
-        compress = conf.get("compress")
+        compress = conf.get("compress", True)
     else:
         compress = config.get(profile).get("compress", True)
 
@@ -348,7 +348,7 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
 @app.cmd_arg('-p', '--profile', type=str, default="default", help="profile name (default by default)")
 def info(filename=os.getcwd(), destination=None, profile="default", **kwargs):
     conf = kwargs.get("conf", None)
-    storage_backend, destination = _get_store_backend(conf, destination, profile)
+    storage_backend, destination, conf = _get_store_backend(conf, destination, profile)
     filename = filename.split("/")[-1]
     keys = match_filename(filename, destination if destination else DEFAULT_DESTINATION, profile)
     if not keys:
@@ -473,7 +473,7 @@ def restore(filename, destination=None, profile="default", **kwargs):
     :return: True if successful.
     """
     conf = kwargs.get("conf", None)
-    storage_backend, destination = _get_store_backend(conf, destination, profile)
+    storage_backend, destination, conf = _get_store_backend(conf, destination, profile)
 
     if not filename:
         log.error("No file to restore, use -f to specify one.")
@@ -575,7 +575,7 @@ def delete(filename, destination=None, profile="default", **kwargs):
 
     key_name = backup.stored_filename
 
-    storage_backend, destination = _get_store_backend(conf, destination, profile)
+    storage_backend, destination, conf = _get_store_backend(conf, destination, profile)
 
     log.info("Deleting {0}".format(key_name))
 
