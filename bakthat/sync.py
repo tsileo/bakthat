@@ -9,6 +9,31 @@ import json
 log = logging.getLogger(__name__)
 
 
+def bakmanager_hook(conf, backup_data, key=None):
+    """First version of a hook for monitoring periodic backups with BakManager
+    (https://bakmanager.io).
+
+    :type conf: dict
+    :param conf: Current profile config
+
+    :type backup_data: dict
+    :param backup_data: Backup data (size)
+
+    :type key: str
+    :param key: Periodic backup identifier
+    """
+    try:
+        if conf.get("bakmanager_token"):
+            bak_backup = {"key": key, "host": socket.gethostname(), "size": backup_data["size"]}
+            bak_payload = {"backup":  bak_backup}
+            requests.post("https://bakmanager.io/api/backups/", bak_payload, auth=(conf.get("bakmanager_token"), ""))
+        else:
+            log.error("No bakmanager_token setting for the current profile.")
+    except Exception, exc:
+        log.error("Error while submitting periodic backup to BakManager.")
+        log.exception(exc)
+
+
 class BakSyncer():
     """Helper to synchronize change on a backup set via a REST API.
 

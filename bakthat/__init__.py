@@ -24,7 +24,7 @@ from bakthat.backends import GlacierBackend, S3Backend, RotationConfig, SwiftBac
 from bakthat.conf import config, DEFAULT_DESTINATION, DEFAULT_LOCATION, CONFIG_FILE
 from bakthat.utils import _interval_string_to_seconds
 from bakthat.models import Backups, Inventory
-from bakthat.sync import BakSyncer
+from bakthat.sync import BakSyncer, bakmanager_hook
 
 __version__ = "0.5.0"
 
@@ -198,7 +198,8 @@ def rotate_backups(filename, destination=None, profile="default", **kwargs):
 @app.cmd_arg('--prompt', type=str, help="yes|no", default="yes")
 @app.cmd_arg('-t', '--tags', type=str, help="space separated tags", default="")
 @app.cmd_arg('-p', '--profile', type=str, default="default", help="profile name (default by default)")
-def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profile="default", **kwargs):
+@app.cmd_arg('-k', '--key', type=str, default=None, help="Custom key for periodic backups (works only with BakManager.io hook.)")
+def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profile="default", key=None, **kwargs):
     """Perform backup.
 
     :type filename: str
@@ -253,6 +254,9 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
                        last_updated=backup_date,
                        backend=destination,
                        is_deleted=False)
+
+    # Useful only when using bakmanager.io hook
+    backup_key = key
 
     password = kwargs.get("password")
     if password is None and prompt.lower() != "no":
@@ -338,6 +342,10 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
     Backups.create(**backup_data)
 
     BakSyncer(conf).sync_auto()
+
+    # bakmanager.io hook, enable with -k/--key paramter
+    if backup_key:
+        bakmanager_hook(conf, backup_data, backup_key)
 
     return backup_data
 
