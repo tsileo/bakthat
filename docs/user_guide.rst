@@ -184,11 +184,11 @@ Delete backup older than the given string interval, like 1M for 1 month and so o
 
 ::
 
-    $ bakthat remove_older_than bakname 3M
+    $ bakthat delete_older_than bakname 3M
 
-    $ bakthat remove_older_than bakname 3M2D8h20m5s
+    $ bakthat delete_older_than bakname 3M2D8h20m5s
 
-    $ bakthat remove_older_than bakname 3M -d glacier
+    $ bakthat delete_older_than bakname 3M -d glacier
 
 
 Backup rotation

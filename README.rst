@@ -169,7 +169,7 @@ And you also need to run again **bakthat configure**.
 0.3.8
 ~~~~~
 
-- Added **remove_older_than** command
+- Added **delete_older_than** command
 - Added **rotate_backups** command (Grandfather-father-son backup rotation scheme)
 
 
