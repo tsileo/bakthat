@@ -1,14 +1,11 @@
 # -*- encoding: utf-8 -*-
 import bakthat
 import tempfile
-import json
 import hashlib
 import os
 import time
 import unittest
 import logging
-
-from bakthat.backends import GlacierBackend
 
 log = logging.getLogger()
 logging.basicConfig(level=logging.DEBUG)
@@ -45,7 +42,7 @@ class BakthatSwiftBackendTestCase(unittest.TestCase):
 
         os.remove(self.test_filename)
 
-        bakthat.delete(self.test_filename, "swift", profile=self.test_profile)
+        bakthat.delete(backup_data["stored_filename"], "swift", profile=self.test_profile)
 
         self.assertEqual(bakthat.match_filename(self.test_filename, "swift",
                                                 profile=self.test_profile), [])
@@ -91,8 +88,8 @@ class BakthatSwiftBackendTestCase(unittest.TestCase):
                          [])
 
     def test_swift_encrypted_backup_restore(self):
-        bakthat.backup(self.test_file.name, "swift", password=self.password,
-                       profile=self.test_profile)
+        backup_data = bakthat.backup(self.test_file.name, "swift", password=self.password,
+                                     profile=self.test_profile)
 
         self.assertEqual(bakthat.match_filename(self.test_filename, "swift",
                                                 profile=self.test_profile)
@@ -104,7 +101,7 @@ class BakthatSwiftBackendTestCase(unittest.TestCase):
                         [0]["is_enc"])
 
         bakthat.restore(self.test_filename, "swift", password=self.password,
-                                                profile=self.test_profile)
+                        profile=self.test_profile)
 
         restored_hash = hashlib.sha1(
             open(self.test_filename).read()).hexdigest()
@@ -113,7 +110,7 @@ class BakthatSwiftBackendTestCase(unittest.TestCase):
 
         os.remove(self.test_filename)
 
-        bakthat.delete(self.test_filename, "swift",
+        bakthat.delete(backup_data["stored_filename"], "swift",
                        profile=self.test_profile)
 
         self.assertEqual(bakthat.match_filename(self.test_filename,

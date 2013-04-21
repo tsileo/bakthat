@@ -52,9 +52,8 @@ class BakthatTestCase(unittest.TestCase):
         #time.sleep(30)
         #with self.assertRaises(HTTPError):
         #    urlopen(test_url).read()
-
-        kv.delete_key(test_key)
         kv.delete_key(test_key_enc)
+        kv.delete_key(test_key)
         self.assertEqual(kv.get_key(test_key), None)
         self.assertEqual(kv.get_key(test_key2), None)
 
