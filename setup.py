@@ -16,7 +16,7 @@ setup(
     url="http://docs.bakthat.io",
     packages=find_packages(exclude=['ez_setup', 'tests', 'tests.*']),
     long_description=read('README.rst'),
-    install_requires=["aaargh", "boto", "pycrypto", "beefish", "grandfatherson", "peewee", "byteformat", "pyyaml", "sh"],
+    install_requires=["aaargh", "boto", "pycrypto", "beefish", "grandfatherson", "peewee", "byteformat", "pyyaml", "sh", "requests"],
     entry_points={'console_scripts': ["bakthat = bakthat:main"]},
     classifiers=[
         "Development Status :: 4 - Beta",

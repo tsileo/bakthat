@@ -25,6 +25,13 @@ You can restore backups **with** or **without** bakthat, you just have to downlo
 Requirements
 ------------
 
+Bakthat requirements are automatically installed when installing bakthat, but if you want you can install them manually: 
+
+::
+
+    $ pip install -r requirements.txt
+
+
 * `aaargh <http://pypi.python.org/pypi/aaargh>`_
 * `pycrypto <https://www.dlitz.net/software/pycrypto/>`_
 * `beefish <http://pypi.python.org/pypi/beefish>`_
@@ -34,8 +41,9 @@ Requirements
 * `byteformat <https://pypi.python.org/pypi/byteformat>`_
 * `pyyaml <http://pyyaml.org>`_
 * `sh <http://amoffat.github.com/sh/>`_
+* `requests <http://docs.python-requests.org>`_
 
-If you use OpenStack Swift, following additional packages are also required.
+If you want to use OpenStack Swift, following additional packages are also required.
 
 * `python-swiftclient <https://pypi.python.org/pypi/python-swiftclient>`_
 * `python-keystoneclient <https://pypi.python.org/pypi/python-keystoneclient/>`_

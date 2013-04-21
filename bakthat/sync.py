@@ -3,11 +3,7 @@ import logging
 import socket
 from bakthat.models import Backups, Config
 from bakthat.conf import config
-
-try:
-    import requests
-except ImportError, ie:
-    raise Exception("You must install requests module in order to use sync.")
+import requests
 import json
 
 log = logging.getLogger(__name__)
