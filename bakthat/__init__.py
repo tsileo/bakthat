@@ -23,7 +23,7 @@ from byteformat import ByteFormatter
 from bakthat.backends import GlacierBackend, S3Backend, RotationConfig, SwiftBackend
 from bakthat.conf import config, DEFAULT_DESTINATION, DEFAULT_LOCATION, CONFIG_FILE
 from bakthat.utils import _interval_string_to_seconds
-from bakthat.models import Backups, Inventory
+from bakthat.models import Backups
 from bakthat.sync import BakSyncer, bakmanager_hook
 
 __version__ = "0.5.0"
