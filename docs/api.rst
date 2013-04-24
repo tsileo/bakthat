@@ -69,7 +69,7 @@ S3Backend
    :members:
 
 SwiftBackend
-~~~~~~~~~
+~~~~~~~~~~~~
 
 .. autoclass:: bakthat.backends.SwiftBackend
    :members:
