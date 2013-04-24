@@ -156,6 +156,13 @@ Developer's Guide
 
    developer_guide
 
+BakManager Integration
+----------------------
+
+.. toctree::
+   :maxdepth: 2
+
+   bakmanager_integration
 
 API Documentation
 -----------------

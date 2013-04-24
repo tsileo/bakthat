@@ -21,11 +21,6 @@ restore
 
 .. autofunction:: restore
 
-ls
-~~
-
-.. autofunction:: ls
-
 info
 ~~~~
 
@@ -73,6 +68,13 @@ S3Backend
 .. autoclass:: bakthat.backends.S3Backend
    :members:
 
+SwiftBackend
+~~~~~~~~~
+
+.. autoclass:: bakthat.backends.SwiftBackend
+   :members:
+
+
 RotationConfig
 ~~~~~~~~~~~~~~
 
@@ -103,6 +105,10 @@ BakSyncer
 .. autoclass:: bakthat.sync.BakSyncer
    :members:
 
+bakmanager_hook
+~~~~~~~~~~~~~~~
+
+.. autofunction:: bakthat.sync.bakmanager_hook
 
 Utils
 -----

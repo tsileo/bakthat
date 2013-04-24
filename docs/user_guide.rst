@@ -21,7 +21,7 @@ If you haven't configured bakthat yet, you should run:
 
 .. note::
 
-    Even if you have set a default destination, you can use a different destination using the <code>-d/--destination</code> parameter, for example, if S3 is the default destination, to use Glacier just add "-d glacier" or "--destination glacier".
+    Even if you have set a default destination, you can use a different destination using the **-d/--destination** parameter, for example, if S3 is the default destination, to use Glacier just add "-d glacier" or "--destination glacier".
 
 
 Backup
@@ -53,7 +53,7 @@ When backing up file, bakthat store files in gzip format, under the following fo
 
     If you try to backup a file already gziped, bakthat will only rename it (change extention to .tgz and append utctime).
 
-    And you can also disable compression by setting <code>compress: false</code> in you configuration file (~/.bakthat.yml by default).
+    And you can also disable compression by setting **compress: false** in you configuration file (~/.bakthat.yml by default).
 
 
 Bakthat let you tag backups to retrieve them faster, when backing up a file, just append the **--tags**/**-t** argument, tags are space separated, when adding multiple tags, just quote the whole string (e.g. **--tags "tag1 tag2 tag3"**)
