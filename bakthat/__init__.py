@@ -24,16 +24,30 @@ from bakthat.backends import GlacierBackend, S3Backend, RotationConfig, SwiftBac
 from bakthat.conf import config, DEFAULT_DESTINATION, DEFAULT_LOCATION, CONFIG_FILE
 from bakthat.utils import _interval_string_to_seconds
 from bakthat.models import Backups
-from bakthat.sync import BakSyncer, bakmanager_hook
+from bakthat.sync import BakSyncer, bakmanager_hook, bakmanager_periodic_backups
 
 __version__ = "0.5.0"
 
 app = aaargh.App(description="Compress, encrypt and upload files directly to Amazon S3/Glacier/Swift.")
 
+
+class BakthatFilter(logging.Filter):
+    def filter(self, rec):
+        if rec.name.startswith("bakthat"):
+            return True
+        else:
+            return rec.levelno >= logging.WARNING
+
 log = logging.getLogger()
 
-if not log.handlers:
-    logging.basicConfig(level=logging.INFO, format='%(message)s')
+#if not log.handlers:
+#    logging.basicConfig(level=logging.INFO, format='%(message)s')
+handler = logging.StreamHandler()
+handler.addFilter(BakthatFilter())
+handler.setFormatter(logging.Formatter('%(message)s'))
+log.addHandler(handler)
+log.setLevel(logging.INFO)
+#logging.getLogger("request").addFilter(BakthatFilter())
 
 STORAGE_BACKEND = dict(s3=S3Backend, glacier=GlacierBackend, swift=SwiftBackend)
 
@@ -593,6 +607,11 @@ def delete(filename, destination=None, profile="default", **kwargs):
     BakSyncer(conf).sync_auto()
 
     return True
+
+
+@app.cmd(help="")
+def periodic_backups():
+    bakmanager_periodic_backups(config.get("default"))
 
 
 @app.cmd(help="Trigger synchronization")

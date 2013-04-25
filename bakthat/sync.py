@@ -9,6 +9,40 @@ import json
 log = logging.getLogger(__name__)
 
 
+def bakmanager_periodic_backups(conf):
+    """Fetch periodic backups info from bakmanager.io API."""
+    if conf.get("bakmanager_token"):
+        bakmanager_backups_endpoint = conf.get("bakmanager_api", "https://bakmanager.io/api/keys/")
+        r = requests.get(bakmanager_backups_endpoint, auth=(conf.get("bakmanager_token"), ""))
+        r.raise_for_status()
+        for key in r.json().get("_items", []):
+            latest_date = key.get("latest", {}).get("date_human")
+            line = "{key:20} status: {status:5} interval: {interval_human:6} total :{total_size_human:10}".format(**key)
+            line += " latest: {0} ".format(latest_date)
+            print line
+    else:
+        log.error("No bakmanager_token setting for the current profile.")
+
+"""
+{u'status': u'OK',
+ u'total_size_human': u'56.5 KB',
+ u'updated': u'Thu, 01 Jan 1970 00:00:00 UTC',
+ u'created': u'Thu, 01 Jan 1970 00:00:00 UTC',
+ u'total_size': 56540,
+ u'interval': 86400,
+ u'interval_human': u'1D',
+ u'etag': u'0880861e53d373826f8ca5a49bbe112535f987a6',
+ u'hosts': [u'tomt0m'],
+ u'key': u'predcheck',
+ u'_links': {u'self': {u'href': u'bakmanager.io/api/keys/5177947bade8581e8dd39493/', u'title': u'key'}},
+ u'_id': u'5177947bade8581e8dd39493',
+ u'latest': {u'date': u'2013-04-24T10:16:17+02:00',
+             u'date_human': u'2013/04/24 10:16:17',
+             u'date_utc': u'2013-04-24T08:16:17',
+             u'size_human': u'28.3 KB',
+             u'size': 28270}}
+"""
+
 def bakmanager_hook(conf, backup_data, key=None):
     """First version of a hook for monitoring periodic backups with BakManager
     (https://bakmanager.io).
