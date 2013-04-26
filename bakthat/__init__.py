@@ -40,14 +40,13 @@ class BakthatFilter(logging.Filter):
 
 log = logging.getLogger()
 
-#if not log.handlers:
+if not log.handlers:
 #    logging.basicConfig(level=logging.INFO, format='%(message)s')
-handler = logging.StreamHandler()
-handler.addFilter(BakthatFilter())
-handler.setFormatter(logging.Formatter('%(message)s'))
-log.addHandler(handler)
-log.setLevel(logging.INFO)
-#logging.getLogger("request").addFilter(BakthatFilter())
+    handler = logging.StreamHandler()
+    handler.addFilter(BakthatFilter())
+    handler.setFormatter(logging.Formatter('%(message)s'))
+    log.addHandler(handler)
+    log.setLevel(logging.INFO)
 
 STORAGE_BACKEND = dict(s3=S3Backend, glacier=GlacierBackend, swift=SwiftBackend)
 

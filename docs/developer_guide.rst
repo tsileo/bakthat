@@ -145,11 +145,18 @@ You can also use it like a normal class:
     bh.backup("myfile.txt")
     bh.rotate("myfile.txt")
 
+.. seealso::
+
+    If you use bakthat to perform periodic backups, you may want to check out :ref:`bakmanager-integration`.
 
 Create a MySQL backup script with BakHelper
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Here is a MySQL backup script, it makes use of `sh <http://amoffat.github.com/sh/>`_ to call system **mysqldump**.
+
+.. seealso::
+
+    You can also check out a `MongoDB backup script example here <http://thomassileo.com/blog/2013/03/21/backing-up-mongodb-to-amazon-glacier-slash-s3-with-python-using-sh-and-bakthat/>`_.
 
 .. code-block:: python
 
