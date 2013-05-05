@@ -11,10 +11,16 @@ DATABASE = os.path.expanduser("~/.bakthat.sqlite")
 DEFAULT_LOCATION = "us-east-1"
 DEFAULT_DESTINATION = "s3"
 
+
+def load_config(config_file=CONFIG_FILE):
+    """ Try to load a yaml config file. """
+    config = {}
+    if os.path.isfile(config_file):
+        log.debug("Try loading config file: {0}".format(config_file))
+        config = yaml.load(open(config_file))
+        if config:
+            log.debug("Config loaded")
+    return config
+
 # Read default config file
-config = {}
-if os.path.isfile(CONFIG_FILE):
-    log.debug("Try loading default config file: {0}".format(CONFIG_FILE))
-    config = yaml.load(open(CONFIG_FILE))
-    if config:
-        log.debug("Config loaded")
+config = load_config()
