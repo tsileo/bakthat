@@ -86,6 +86,13 @@ Bakthat Python API
 Changelog
 ---------
 
+0.5.3
+~~~~~
+
+**May 6 2013**
+
+- Bugfix config
+
 0.5.2
 ~~~~~
 
