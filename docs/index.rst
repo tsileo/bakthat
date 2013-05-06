@@ -172,6 +172,13 @@ API Documentation
 
    api
 
+Articles
+--------
+
+* `Bakthat 0.5.0 Released With OpenStack Swift Support and BakManager Integration <http://thomassileo.com/blog/2013/04/24/bakthat-0-dot-5-0-released-with-openstack-swift-support-and-bakmanager-integration/>`_
+* `Backing Up MongoDB to Amazon Glacier/S3 With Python Using Sh and Bakthat <http://thomassileo.com/blog/2013/03/21/backing-up-mongodb-to-amazon-glacier-slash-s3-with-python-using-sh-and-bakthat/>`_
+* `Bakthat 0.4.5 Released, Introducing a New Helper: KeyValue <http://thomassileo.com/blog/2013/03/20/bakthat-0-dot-4-5-released-introducing-a-new-helper-keyvalue/>`_
+* `Bakthat 0.2.0 Released Adding Amazon Glacier Support <http://thomassileo.com/blog/2012/10/18/bakthat-0-dot-2-0-released-adding-amazon-glacier-support/>`_
 
 Indices and tables
 ==================

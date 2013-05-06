@@ -1,6 +1,6 @@
 import peewee
 from datetime import datetime
-from bakthat.conf import config, DATABASE
+from bakthat.conf import config, load_config, DATABASE
 import hashlib
 import json
 import sqlite3
@@ -41,7 +41,11 @@ class Backups(BaseModel):
 
     @classmethod
     def match_filename(cls, filename, destination, **kwargs):
-        profile = config.get(kwargs.get("profile", "default"))
+        conf = config
+        if kwargs.get("config"):
+            conf = load_config(kwargs.get("config"))
+
+        profile = conf.get(kwargs.get("profile", "default"))
 
         s3_key = hashlib.sha512(profile.get("access_key") +
                                 profile.get("s3_bucket")).hexdigest()
@@ -61,6 +65,10 @@ class Backups(BaseModel):
 
     @classmethod
     def search(cls, query="", destination="", **kwargs):
+        conf = config
+        if kwargs.get("config"):
+            conf = load_config(kwargs.get("config"))
+
         if not destination:
             destination = ["s3", "glacier"]
         if isinstance(destination, (str, unicode)):
@@ -70,7 +78,7 @@ class Backups(BaseModel):
         wheres = []
 
         if kwargs.get("profile"):
-            profile = config.get(kwargs.get("profile"))
+            profile = conf.get(kwargs.get("profile"))
 
             s3_key = hashlib.sha512(profile.get("access_key") +
                                     profile.get("s3_bucket")).hexdigest()

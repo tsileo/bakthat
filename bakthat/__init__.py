@@ -25,14 +25,14 @@ from bakthat.utils import _interval_string_to_seconds
 from bakthat.models import Backups
 from bakthat.sync import BakSyncer, bakmanager_hook, bakmanager_periodic_backups
 
-__version__ = "0.5.2"
+__version__ = "0.5.3"
 
 app = aaargh.App(description="Compress, encrypt and upload files directly to Amazon S3/Glacier/Swift.")
 
 
 class BakthatFilter(logging.Filter):
     def filter(self, rec):
-        if rec.name.startswith("bakthat"):
+        if rec.name.startswith("bakthat") or rec.name == "root":
             return True
         else:
             return rec.levelno >= logging.WARNING
@@ -91,7 +91,7 @@ def delete_older_than(filename, interval, destination=None, profile="default", c
     deleted = []
 
     backup_date_filter = int(datetime.utcnow().strftime("%s")) - interval_seconds
-    for backup in Backups.search(filename, destination, older_than=backup_date_filter, profile=profile):
+    for backup in Backups.search(filename, destination, older_than=backup_date_filter, profile=profile, config=config):
         real_key = backup.stored_filename
         log.info("Deleting {0}".format(real_key))
 
@@ -144,7 +144,7 @@ def rotate_backups(filename, destination=None, profile="default", config=CONFIG_
 
     deleted = []
 
-    backups = Backups.search(filename, destination, profile=profile)
+    backups = Backups.search(filename, destination, profile=profile, config=config)
     backups_date = [datetime.fromtimestamp(float(backup.backup_date)) for backup in backups]
 
     to_delete = grandfatherson.to_delete(backups_date,
@@ -153,10 +153,10 @@ def rotate_backups(filename, destination=None, profile="default", config=CONFIG_
                                          months=int(rotate.conf["months"]),
                                          firstweekday=int(rotate.conf["first_week_day"]),
                                          now=datetime.utcnow())
-
     for delete_date in to_delete:
         backup_date = int(delete_date.strftime("%s"))
-        backup = Backups.search(filename, destination, backup_date=backup_date, profile=profile).get()
+        backup = Backups.search(filename, destination, backup_date=backup_date, profile=profile, config=config).get()
+
         if backup:
             real_key = backup.stored_filename
             log.info("Deleting {0}".format(real_key))
@@ -335,7 +335,7 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
 @app.cmd_arg('-p', '--profile', type=str, default="default", help="profile name (all profiles are displayed by default)")
 @app.cmd_arg('-c', '--config', type=str, default=CONFIG_FILE, help="path to config file")
 def show(query="", destination="", tags="", profile="default", config=CONFIG_FILE):
-    backups = Backups.search(query, destination, profile=profile, tags=tags)
+    backups = Backups.search(query, destination, profile=profile, tags=tags, config=config)
     _display_backups(backups)
 
 
@@ -448,7 +448,7 @@ def restore(filename, destination=None, profile="default", config=CONFIG_FILE, *
         log.error("No file to restore, use -f to specify one.")
         return
 
-    backup = Backups.match_filename(filename, destination, profile=profile)
+    backup = Backups.match_filename(filename, destination, profile=profile, config=config)
 
     if not backup:
         log.error("No file matched.")
@@ -535,7 +535,7 @@ def delete(filename, destination=None, profile="default", config=CONFIG_FILE, **
         log.error("No file to delete, use -f to specify one.")
         return
 
-    backup = Backups.match_filename(filename, destination, profile=profile)
+    backup = Backups.match_filename(filename, destination, profile=profile, config=config)
 
     if not backup:
         log.error("No file matched.")
