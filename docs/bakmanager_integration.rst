@@ -40,7 +40,7 @@ That's it, now you can check your backups on your `BakManager <https://bakmanage
 Periodic backups status
 -----------------------
 
-Bakthat makes use of `BakManager API <>`_ to let you check your periodic backups status directly from bakthat without leaving the command line.
+Bakthat makes use of `BakManager API <https://bakmanager.io/documentation#api-docs>`_ to let you check your periodic backups status directly from bakthat without leaving the command line.
 
 .. code-block:: console
 
