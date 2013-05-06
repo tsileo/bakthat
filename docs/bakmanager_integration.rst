@@ -14,6 +14,10 @@ It also provides analytics and is tightly integrated with Bakthat.
 
    `BakManager <https://bakmanager.io>`_ screenshot.
 
+
+Monitor your backups
+--------------------
+
 To monitor your periodic backups using bakthat, you just need to add your API token in your profile settings (located at ~/.bakthat.yml by default).
 
 .. code-block:: yaml
@@ -30,8 +34,17 @@ Now when you want to monitor/setup periodic backups, just define a periodic back
     $ bakthat backup mysqlbakdir -k sqldb1
 
 
-That's it, now you can check backups on your `BakManager <https://bakmanager.io>`_ account and define the interval between each backups.
+That's it, now you can check your backups on your `BakManager <https://bakmanager.io>`_ account and define the interval between each backups.
 
-.. note::
 
-    This hook is a first step towards full `BakManager <https://bakmanager.io>`_  integration, the next step is to have **bakthat periodic_backups** command that fetch periodic backups status from BakManager Keys API.
+Periodic backups status
+-----------------------
+
+Bakthat makes use of `BakManager API <>`_ to let you check your periodic backups status directly from bakthat without leaving the command line.
+
+.. code-block:: console
+
+    $ bakthat periodic_backups
+    myhost_mysql          status: LATE  interval: 2D     total: 2.7 MB     latest: 2013/05/01 11:40:31 
+    myhost_mongodb        status: OK    interval: 1D     total: 4.6 GB     latest: 2013/05/01 14:31:27
+

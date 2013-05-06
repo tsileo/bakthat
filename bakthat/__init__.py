@@ -7,7 +7,6 @@ from getpass import getpass
 import logging
 import hashlib
 import socket
-import json
 import re
 import mimetypes
 import calendar
@@ -26,7 +25,7 @@ from bakthat.utils import _interval_string_to_seconds
 from bakthat.models import Backups
 from bakthat.sync import BakSyncer, bakmanager_hook, bakmanager_periodic_backups
 
-__version__ = "0.5.0"
+__version__ = "0.5.1"
 
 app = aaargh.App(description="Compress, encrypt and upload files directly to Amazon S3/Glacier/Swift.")
 

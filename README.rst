@@ -86,6 +86,14 @@ Bakthat Python API
 Changelog
 ---------
 
+0.5.1
+~~~~~
+
+**May 5 2013**
+
+- New **-c**/**--config** argument.
+- New periodic_backups command tied to `BakManager API <https://bakmanager.io>`_
+
 0.5.0
 ~~~~~
 

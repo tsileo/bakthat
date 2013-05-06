@@ -31,8 +31,8 @@ Backup
 
     $ bakthat backup --help
     usage: bakthat backup [-h] [-d DESTINATION] [--prompt PROMPT] [-t TAGS]
-                      [-p PROFILE]
-                      [filename]
+                              [-p PROFILE] [-c CONFIG] [-k KEY]
+                              [filename]
 
     positional arguments:
       filename
@@ -45,6 +45,10 @@ Backup
       -t TAGS, --tags TAGS  space separated tags
       -p PROFILE, --profile PROFILE
                             profile name (default by default)
+      -c CONFIG, --config CONFIG
+                            path to config file
+      -k KEY, --key KEY     Custom key for periodic backups (works only with
+                            BakManager.io hook.)
 
 
 When backing up file, bakthat store files in gzip format, under the following format: **originaldirname.utctime.tgz**, where utctime is a UTC datetime (%Y%m%d%H%M%S).
@@ -95,7 +99,8 @@ Restore
 ::
 
     $ bakthat restore --help
-    usage: bakthat restore [-h] [-d DESTINATION] [-p PROFILE] filename
+    usage: bakthat restore [-h] [-d DESTINATION] [-p PROFILE] [-c CONFIG]
+                               filename
 
     positional arguments:
       filename
@@ -103,9 +108,12 @@ Restore
     optional arguments:
       -h, --help            show this help message and exit
       -d DESTINATION, --destination DESTINATION
-                            s3|glacier
+                            s3|glacier|swift
       -p PROFILE, --profile PROFILE
                             profile name (default by default)
+      -c CONFIG, --config CONFIG
+                            path to config file
+
 
 When restoring a backup, you can:
 
@@ -137,7 +145,9 @@ Let's start with the help for the show subcommand:
 ::
 
     $ bakthat show --help
-    usage: bakthat show [-h] [-d DESTINATION] [-t TAGS] [-p PROFILE] [query]
+    usage: bakthat show [-h] [-d DESTINATION] [-t TAGS] [-p PROFILE]
+                            [-c CONFIG]
+                            [query]
 
     positional arguments:
       query                 search filename for query
@@ -145,10 +155,12 @@ Let's start with the help for the show subcommand:
     optional arguments:
       -h, --help            show this help message and exit
       -d DESTINATION, --destination DESTINATION
-                            glacier|s3, default both
+                            glacier|s3|swift, show every destination by default
       -t TAGS, --tags TAGS  tags space separated
       -p PROFILE, --profile PROFILE
                             profile name (all profiles are displayed by default)
+      -c CONFIG, --config CONFIG
+                            path to config file
 
 So when listing backups, you can:
 
@@ -236,7 +248,7 @@ Bakthat stores configuration in `YAML <http://yaml.org/>`_ format, to have the s
 
 You can also handle **multiples profiles** if you need to manage multiple AWs account or vaults/buckets.
 
-By default, your configuration is stored in **~/.bakthat.yml**.
+By default, your configuration is stored in **~/.bakthat.yml**, but you can specify a different file with the ``-c``/``--config`` parameter.
 
 To get started, you can run ``bakthat configure``.
 
