@@ -92,7 +92,7 @@ Changelog
 **May 5 2013**
 
 - New **-c**/**--config** argument.
-- New periodic_backups command tied to `BakManager API <https://bakmanager.io>`_
+- New periodic_backups command tied to `BakManager API <https://bakmanager.io>`_.
 
 0.5.0
 ~~~~~
