@@ -346,7 +346,7 @@ class BakHelper:
         :return: A list containing the deleted keys (S3) or archives (Glacier).
         """
         if filename is None:
-            filename = self.tmpd
+            filename = self.backup_name
 
         return bakthat.rotate_backups(filename,
                                       destination=kwargs.pop("destination", self.destination),
