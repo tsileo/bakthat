@@ -86,6 +86,13 @@ Bakthat Python API
 Changelog
 ---------
 
+0.5.2
+~~~~~
+
+**May 6 2013**
+
+- new BAKTHAT_PASSWORD environment variable to set password from command line.
+
 0.5.1
 ~~~~~
 

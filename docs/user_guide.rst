@@ -62,6 +62,15 @@ When backing up file, bakthat store files in gzip format, under the following fo
 
 Bakthat let you tag backups to retrieve them faster, when backing up a file, just append the ``--tags``/``-t`` argument, tags are space separated, when adding multiple tags, just quote the whole string (e.g. ``--tags "tag1 tag2 tag3"``)
 
+You can set the password with BAKTHAT_PASSWORD environment variable
+
+.. versionadded:: 0.5.2
+
+    ::
+    
+        $ BAKTHAT_PASSWORD=mypassword bakthat backup myfile
+
+
 If you don't specify a filename/dirname, bakthat will backup the current working directory.
 
 ::
@@ -78,7 +87,13 @@ If you don't specify a filename/dirname, bakthat will backup the current working
     $ bakthat backup /home/thomas/mysuperfile.txt
 
     backup to Glacier
-    $ bakthat backup -d glacier
+    $ bakthat backup myfile -d glacier
+
+    set the password with BAKTHAT_PASSWORD environment variable
+    $ BAKTHAT_PASSWORD=mypassword bakthat backup myfile
+
+    disable password prompt
+    $ bakthat backup myfile --prompt no
 
 
 .. note::

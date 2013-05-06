@@ -25,7 +25,7 @@ from bakthat.utils import _interval_string_to_seconds
 from bakthat.models import Backups
 from bakthat.sync import BakSyncer, bakmanager_hook, bakmanager_periodic_backups
 
-__version__ = "0.5.1"
+__version__ = "0.5.2"
 
 app = aaargh.App(description="Compress, encrypt and upload files directly to Amazon S3/Glacier/Swift.")
 
@@ -236,7 +236,7 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
     # Useful only when using bakmanager.io hook
     backup_key = key
 
-    password = kwargs.get("password")
+    password = kwargs.get("password", os.environ.get("BAKTHAT_PASSWORD"))
     if password is None and prompt.lower() != "no":
         password = getpass("Password (blank to disable encryption): ")
         if password:
