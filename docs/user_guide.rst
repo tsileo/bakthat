@@ -248,6 +248,12 @@ Now you can rotate a backup set:
 
     $ bakthat rotate_backups bakname
 
+
+.. note::
+
+    Bakthat rely on the `GrandFatherSon <https://pypi.python.org/pypi/GrandFatherSon>`_ module to compute rotations, so if you need to setup more complex rotation scheme (like hourly backups), refer to the docs and change the rotation settings manually in your configuration file.
+
+
 Accessing bakthat Python API
 ----------------------------
 
