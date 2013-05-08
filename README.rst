@@ -86,6 +86,14 @@ Bakthat Python API
 Changelog
 ---------
 
+0.5.4
+~~~~~
+
+**May 8 2013**
+
+- Better log handling
+- Allow more complex rotation scheme
+
 0.5.3
 ~~~~~
 
