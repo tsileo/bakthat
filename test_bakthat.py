@@ -1,17 +1,20 @@
 # -*- encoding: utf-8 -*-
 import bakthat
 import tempfile
-import json
 import hashlib
 import os
 import time
 import unittest
 import logging
 
-from bakthat.backends import GlacierBackend
-
 log = logging.getLogger()
-logging.basicConfig(level=logging.DEBUG)
+
+handler = logging.StreamHandler()
+handler.setLevel(logging.DEBUG)
+handler.addFilter(bakthat.BakthatFilter())
+handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+log.addHandler(handler)
+log.setLevel(logging.DEBUG)
 
 
 class BakthatTestCase(unittest.TestCase):

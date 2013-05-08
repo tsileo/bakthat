@@ -8,7 +8,13 @@ import unittest
 import logging
 
 log = logging.getLogger()
-logging.basicConfig(level=logging.DEBUG)
+
+handler = logging.StreamHandler()
+handler.setLevel(logging.DEBUG)
+handler.addFilter(bakthat.BakthatFilter())
+handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+log.addHandler(handler)
+log.setLevel(logging.DEBUG)
 
 
 class BakthatSwiftBackendTestCase(unittest.TestCase):

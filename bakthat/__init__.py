@@ -29,6 +29,8 @@ __version__ = "0.5.3"
 
 app = aaargh.App(description="Compress, encrypt and upload files directly to Amazon S3/Glacier/Swift.")
 
+log = logging.getLogger(__name__)
+
 
 class BakthatFilter(logging.Filter):
     def filter(self, rec):
@@ -37,15 +39,6 @@ class BakthatFilter(logging.Filter):
         else:
             return rec.levelno >= logging.WARNING
 
-log = logging.getLogger()
-
-if not log.handlers:
-#    logging.basicConfig(level=logging.INFO, format='%(message)s')
-    handler = logging.StreamHandler()
-    handler.addFilter(BakthatFilter())
-    handler.setFormatter(logging.Formatter('%(message)s'))
-    log.addHandler(handler)
-    log.setLevel(logging.INFO)
 
 STORAGE_BACKEND = dict(s3=S3Backend, glacier=GlacierBackend, swift=SwiftBackend)
 
@@ -147,11 +140,11 @@ def rotate_backups(filename, destination=None, profile="default", config=CONFIG_
     backups = Backups.search(filename, destination, profile=profile, config=config)
     backups_date = [datetime.fromtimestamp(float(backup.backup_date)) for backup in backups]
 
-    rotate_kwargs = rotate.copy()
+    rotate_kwargs = rotate.conf.copy()
     del rotate_kwargs["first_week_day"]
     for k, v in rotate_kwargs.iteritems():
         rotate_kwargs[k] = int(v)
-    rotate_kwargs["firstweekday"] = int(rotate["first_week_day"])
+    rotate_kwargs["firstweekday"] = int(rotate.conf["first_week_day"])
     rotate_kwargs["now"] = datetime.utcnow()
 
     to_delete = grandfatherson.to_delete(backups_date, **rotate_kwargs)
@@ -584,6 +577,15 @@ def reset_sync(**kwargs):
 
 
 def main():
+
+    if not log.handlers:
+    #    logging.basicConfig(level=logging.INFO, format='%(message)s')
+        handler = logging.StreamHandler()
+        handler.addFilter(BakthatFilter())
+        handler.setFormatter(logging.Formatter('%(message)s'))
+        log.addHandler(handler)
+        log.setLevel(logging.INFO)
+
     app.run()
 
 
