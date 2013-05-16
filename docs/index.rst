@@ -21,6 +21,8 @@ Here are some features:
 
 You can restore backups **with** or **without** bakthat, you just have to download the backup, decrypt it with `Beefish <http://pypi.python.org/pypi/beefish>`_ command-line tool and untar it.
 
+You may also check out `BakServer <http://bakserver.bakthat.io>`_, a self-hosted Python server, to help you manage backups anywhere and keep multiple bakthat client synchronized across servers.
+
 
 Requirements
 ------------

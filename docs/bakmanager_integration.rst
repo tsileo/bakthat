@@ -12,8 +12,6 @@ It also provides analytics and is tightly integrated with Bakthat.
 .. figure::  https://bakamanager-io.s3.amazonaws.com/bakmanager_screen2.jpg
    :align:   center
 
-   `BakManager <https://bakmanager.io>`_ screenshot.
-
 
 Monitor your backups
 --------------------
