@@ -102,9 +102,6 @@ If you don't specify a filename/dirname, bakthat will backup the current working
 
         $ export TMP=/home/thomas
 
-.. seealso::
-
-    If you use bakthat to perform periodic backups, you may want to check out :ref:`bakmanager-integration`.
 
 Restore
 -------
