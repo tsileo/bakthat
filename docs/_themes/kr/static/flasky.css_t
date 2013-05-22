@@ -10,7 +10,7 @@
 {% set sidebar_width = '220px' %}
 
 @import url("basic.css");
-
+@import url("//netdna.bootstrapcdn.com/font-awesome/3.1.1/css/font-awesome.css");
 /* -- page layout ----------------------------------------------------------- */
 
 @import url('//fonts.googleapis.com/css?family=Open+Sans:400italic,700italic,400,700|Inconsolata');
