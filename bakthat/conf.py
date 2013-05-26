@@ -11,6 +11,8 @@ DATABASE = os.path.expanduser("~/.bakthat.sqlite")
 DEFAULT_LOCATION = "us-east-1"
 DEFAULT_DESTINATION = "s3"
 
+EXCLUDE_FILES = [".bakthatexclude", ".gitignore"]
+
 
 def load_config(config_file=CONFIG_FILE):
     """ Try to load a yaml config file. """

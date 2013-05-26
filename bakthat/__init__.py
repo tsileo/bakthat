@@ -8,8 +8,10 @@ import logging
 import hashlib
 import socket
 import re
+import fnmatch
 import mimetypes
 import calendar
+import functools
 from contextlib import closing  # for Python2.6 compatibility
 from gzip import GzipFile
 
@@ -20,7 +22,7 @@ import grandfatherson
 from byteformat import ByteFormatter
 
 from bakthat.backends import GlacierBackend, S3Backend, RotationConfig, SwiftBackend
-from bakthat.conf import config, load_config, DEFAULT_DESTINATION, DEFAULT_LOCATION, CONFIG_FILE
+from bakthat.conf import config, load_config, DEFAULT_DESTINATION, DEFAULT_LOCATION, CONFIG_FILE, EXCLUDE_FILES
 from bakthat.utils import _interval_string_to_seconds
 from bakthat.models import Backups
 from bakthat.sync import BakSyncer, bakmanager_hook, bakmanager_periodic_backups
@@ -169,6 +171,28 @@ def rotate_backups(filename, destination=None, profile="default", config=CONFIG_
     return deleted
 
 
+def _get_exclude(exclude_file):
+    """ Load a .gitignore like file to exclude files/dir from backups.
+
+    :type exclude_file: str
+    :param exclude_file: Path to the exclude file
+
+    :rtype: function
+    :return: A function ready to inject in tar.add(exlude=_exclude)
+
+    """
+    patterns = filter(None, open(exclude_file).read().split("\n"))
+
+    def _exclude(filename):
+        for pattern in patterns:
+            if re.search(fnmatch.translate(pattern), filename):
+                log.debug("{0} excluded".format(filename))
+                print "{0} excluded".format(filename)
+                return True
+        return False
+    return _exclude
+
+
 @app.cmd(help="Backup a file or a directory, backup the current directory if no arg is provided.")
 @app.cmd_arg('filename', type=str, default=os.getcwd(), nargs="?")
 @app.cmd_arg('-d', '--destination', type=str, help="s3|glacier|swift", default=None)
@@ -177,7 +201,8 @@ def rotate_backups(filename, destination=None, profile="default", config=CONFIG_
 @app.cmd_arg('-p', '--profile', type=str, default="default", help="profile name (default by default)")
 @app.cmd_arg('-c', '--config', type=str, default=CONFIG_FILE, help="path to config file")
 @app.cmd_arg('-k', '--key', type=str, default=None, help="Custom key for periodic backups (works only with BakManager.io hook.)")
-def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profile="default", config=CONFIG_FILE, key=None, **kwargs):
+@app.cmd_arg('--exclude-file', type=str, default=None)
+def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profile="default", config=CONFIG_FILE, key=None, exclude_file=None, **kwargs):
     """Perform backup.
 
     :type filename: str
@@ -218,6 +243,17 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
 
     if not compress:
         backup_file_fmt = "{0}.{1}"
+
+    if exclude_file and os.path.isfile(exclude_file):
+        EXCLUDE_FILES.insert(0, exclude_file)
+
+    _exclude = lambda filename: False
+    if os.path.isdir(filename):
+        join = functools.partial(os.path.join, filename)
+        for efile in EXCLUDE_FILES:
+            efile = join(efile)
+            if os.path.isfile(efile):
+                _exclude = _get_exclude(efile)
 
     log.info("Backing up " + filename)
     arcname = filename.strip('/').split('/')[-1]
@@ -267,9 +303,10 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
     else:
         # If not we compress it
         log.info("Compressing...")
+
         with tempfile.NamedTemporaryFile(delete=False) as out:
             with closing(tarfile.open(fileobj=out, mode="w:gz")) as tar:
-                tar.add(filename, arcname=arcname)
+                tar.add(filename, arcname=arcname, exclude=_exclude)
             outname = out.name
             out.seek(0)
             backup_data["size"] = os.fstat(out.fileno()).st_size

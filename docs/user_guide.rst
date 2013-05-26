@@ -94,13 +94,38 @@ If you don't specify a filename/dirname, bakthat will backup the current working
     $ bakthat backup myfile --prompt no
 
 
-.. note::
+Excluding files
+~~~~~~~~~~~~~~~
 
-    You can change the temp directory location by setting the TMPDIR, TEMP or TMP environment variables if the backup is too big to fit in the default temp directory.
+.. versionadded:: 0.5.5
 
-    ::
+Bakthat use a ".gitignore style" way to exclude files using Unix shell-style wildcards.
 
-        $ export TMP=/home/thomas
+
+There is two way to exclude file:
+- by creating a **.bakthatexclude** file at the root of the directory you want to backup.
+- by specifying a file directly with the ``--exclude-file`` argument.
+
+By default when performing a backup, if no exclude file is specified, it will look for either a **.bakthatexclude** file or a **.gitignore** file. So you backup a git repository, it will use the existing .gitignore if available. 
+
+Here is an example **.bakthatexclude** file, wich exlude all *.pyc and *.log files, and both tmp and cache directory.
+
+::
+
+    *.pyc
+    *.log
+    tmp
+    cache
+
+
+Temp directory
+~~~~~~~~~~~~~~
+
+You can change the temp directory location by setting the TMPDIR, TEMP or TMP environment variables if the backup is too big to fit in the default temp directory.
+
+::
+
+    $ export TMP=/home/thomas
 
 
 Restore
