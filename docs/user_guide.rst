@@ -117,6 +117,14 @@ Here is an example **.bakthatexclude** file, wich exlude all *.pyc and *.log fil
     tmp
     cache
 
+Reduced redundancy using S3
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you backup to S3, you can active the reduced redundancy by using the ``--s3-reduced-redundancy`` flag.
+
+::
+
+    bakthat backup --s3-reduced-redundancy
 
 Temp directory
 ~~~~~~~~~~~~~~

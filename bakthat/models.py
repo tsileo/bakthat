@@ -27,7 +27,6 @@ class BaseModel(peewee.Model):
 
     @classmethod
     def create(cls, **attributes):
-        print "create"
         return super(BaseModel, cls).create(**attributes)
 
 

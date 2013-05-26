@@ -100,11 +100,11 @@ class S3Backend(BakthatBackend):
         percent = int(complete * 100.0 / total)
         log.info("Upload completion: {0}%".format(percent))
 
-    def upload(self, keyname, filename, cb=True):
+    def upload(self, keyname, filename, **kwargs):
         k = Key(self.bucket)
         k.key = keyname
-        upload_kwargs = {}
-        if cb:
+        upload_kwargs = {"reduced_redundancy": kwargs.get("s3_reduced_redundancy", False)}
+        if kwargs.get("cb", True):
             upload_kwargs = dict(cb=self.cb, num_cb=10)
         k.set_contents_from_filename(filename, **upload_kwargs)
         k.set_acl("private")
@@ -181,7 +181,7 @@ class GlacierBackend(BakthatBackend):
         else:
             raise Exception("You must set s3_bucket in order to backup/restore inventory to/from S3.")
 
-    def upload(self, keyname, filename):
+    def upload(self, keyname, filename, **kwargs):
         archive_id = self.vault.concurrent_create_archive_from_file(filename, keyname)
         Inventory.create(filename=keyname, archive_id=archive_id)
 
@@ -294,7 +294,7 @@ class SwiftBackend(BakthatBackend):
         BakthatBackend.__init__(self, conf, profile)
 
         from swiftclient import Connection, ClientException
-        
+
         self.con = Connection(self.conf["auth_url"], self.conf["access_key"], 
                               self.conf["secret_key"],
                               auth_version=self.conf["auth_version"],
@@ -329,7 +329,7 @@ class SwiftBackend(BakthatBackend):
         percent = int(complete * 100.0 / total)
         log.info("Upload completion: {0}%".format(percent))
 
-    def upload(self, keyname, filename, cb=True):
+    def upload(self, keyname, filename, **kwargs):
         fp = open(filename, "rb")
         self.con.put_object(self.container, keyname, fp)
 

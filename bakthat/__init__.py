@@ -187,7 +187,6 @@ def _get_exclude(exclude_file):
         for pattern in patterns:
             if re.search(fnmatch.translate(pattern), filename):
                 log.debug("{0} excluded".format(filename))
-                print "{0} excluded".format(filename)
                 return True
         return False
     return _exclude
@@ -202,7 +201,8 @@ def _get_exclude(exclude_file):
 @app.cmd_arg('-c', '--config', type=str, default=CONFIG_FILE, help="path to config file")
 @app.cmd_arg('-k', '--key', type=str, default=None, help="Custom key for periodic backups (works only with BakManager.io hook.)")
 @app.cmd_arg('--exclude-file', type=str, default=None)
-def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profile="default", config=CONFIG_FILE, key=None, exclude_file=None, **kwargs):
+@app.cmd_arg('--s3-reduced-redundancy', action="store_true")
+def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profile="default", config=CONFIG_FILE, key=None, exclude_file=None, s3_reduced_redundancy=False, **kwargs):
     """Perform backup.
 
     :type filename: str
@@ -244,6 +244,8 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
     if not compress:
         backup_file_fmt = "{0}.{1}"
 
+    log.info("Backing up " + filename)
+
     if exclude_file and os.path.isfile(exclude_file):
         EXCLUDE_FILES.insert(0, exclude_file)
 
@@ -254,8 +256,8 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
             efile = join(efile)
             if os.path.isfile(efile):
                 _exclude = _get_exclude(efile)
+                log.info("Using {0} to exclude files.".format(efile))
 
-    log.info("Backing up " + filename)
     arcname = filename.strip('/').split('/')[-1]
     now = datetime.utcnow()
     date_component = now.strftime("%Y%m%d%H%M%S")
@@ -344,7 +346,7 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
     backup_data["backend_hash"] = hashlib.sha512(access_key + container_key).hexdigest()
 
     log.info("Uploading...")
-    storage_backend.upload(stored_filename, outname)
+    storage_backend.upload(stored_filename, outname, s3_reduced_redundancy=s3_reduced_redundancy)
 
     # We only remove the file if the archive is created by bakthat
     if bakthat_compression or bakthat_encryption:
