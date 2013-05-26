@@ -86,6 +86,14 @@ Bakthat Python API
 Changelog
 ---------
 
+0.5.5
+~~~~~
+
+** May 26 2013**
+
+- Support for excluding files, using .bakthatexclude/.gitignore file, or a custom file.
+- Added support for reduced redundancy when using S3
+
 0.5.4
 ~~~~~
 

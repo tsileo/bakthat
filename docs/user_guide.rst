@@ -120,6 +120,8 @@ Here is an example **.bakthatexclude** file, wich exlude all *.pyc and *.log fil
 Reduced redundancy using S3
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. versionadded:: 0.5.5
+
 If you backup to S3, you can active the reduced redundancy by using the ``--s3-reduced-redundancy`` flag.
 
 ::
