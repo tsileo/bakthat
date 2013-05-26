@@ -101,14 +101,14 @@ Excluding files
 
 Bakthat use a ".gitignore style" way to exclude files using Unix shell-style wildcards.
 
-
 There is two way to exclude file:
+
 - by creating a **.bakthatexclude** file at the root of the directory you want to backup.
 - by specifying a file directly with the ``--exclude-file`` argument.
 
 By default when performing a backup, if no exclude file is specified, it will look for either a **.bakthatexclude** file or a **.gitignore** file. So you backup a git repository, it will use the existing .gitignore if available. 
 
-Here is an example **.bakthatexclude** file, wich exlude all *.pyc and *.log files, and both tmp and cache directory.
+Here is an example **.bakthatexclude** file, wich exlude all .pyc and .log files, and both tmp and cache directory.
 
 ::
 
@@ -116,6 +116,7 @@ Here is an example **.bakthatexclude** file, wich exlude all *.pyc and *.log fil
     *.log
     tmp
     cache
+
 
 Reduced redundancy using S3
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
