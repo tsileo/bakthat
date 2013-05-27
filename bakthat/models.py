@@ -25,12 +25,59 @@ class BaseModel(peewee.Model):
     class Meta:
         database = database
 
+
+class SyncedModel(peewee.Model):
+    class Meta:
+        database = database
+
     @classmethod
     def create(cls, **attributes):
-        return super(BaseModel, cls).create(**attributes)
+        if cls._meta.name != "history":
+            History.create(data=json.dumps(dict(**attributes)),
+                           ts=int(datetime.utcnow().strftime("%s")),
+                           action="create",
+                           model=cls._meta.name,
+                           pk=attributes.get(cls.Sync.pk))
+        return super(SyncedModel, cls).create(**attributes)
+
+    def delete_instance(self):
+        if self._meta.name != "history":
+            History.create(data={},
+                           ts=int(datetime.utcnow().strftime("%s")),
+                           action="delete",
+                           model=self._meta.name,
+                           pk=self._data.get(self.Sync.pk))
+        return super(SyncedModel, self).delete_instance(self)
+
+    @classmethod
+    def sync(cls):
+        # Gere les 2 dates de derniere sync
+        # 1. PUSH
+        for history in History.select().where(History.model == cls._meta.name,
+                                              History.ts > 0):
+            if history.action == "create":
+                print "create", history.pk
+            elif history.action == "delete":
+                print "delete", history.pk
+        #add clientHistoryItem to server History table
+        # 2. PULL
+        # Faire l'appel a eve
+        return
 
 
-class Backups(BaseModel):
+class History(BaseModel):
+    """History for sync."""
+    data = JsonField()
+    ts = peewee.IntegerField(index=True)
+    action = peewee.CharField(index=True)
+    model = peewee.CharField(index=True)
+    pk = peewee.CharField(index=True)
+
+    class Meta:
+        db_table = 'history'
+
+
+class Backups(SyncedModel):
     """Backups Model."""
     backend = peewee.CharField(index=True)
     backend_hash = peewee.CharField(index=True, null=True)
@@ -142,6 +189,9 @@ class Backups(BaseModel):
     class Meta:
         db_table = 'backups'
 
+    class Sync:
+        pk = 'stored_filename'
+
 
 class Config(BaseModel):
     """key => value config store."""
@@ -167,7 +217,7 @@ class Config(BaseModel):
         db_table = 'config'
 
 
-class Inventory(BaseModel):
+class Inventory(SyncedModel):
     """Filename => archive_id mapping for glacier archives."""
     archive_id = peewee.CharField(index=True, unique=True)
     filename = peewee.CharField(index=True)
@@ -179,8 +229,11 @@ class Inventory(BaseModel):
     class Meta:
         db_table = 'inventory'
 
+    class Sync:
+        pk = 'filename'
 
-class Jobs(BaseModel):
+
+class Jobs(SyncedModel):
     """filename => job_id mapping for glacier archives."""
     filename = peewee.CharField(index=True)
     job_id = peewee.CharField()
@@ -222,7 +275,7 @@ class Jobs(BaseModel):
         db_table = 'jobs'
 
 
-for table in [Backups, Jobs, Inventory, Config]:
+for table in [Backups, Jobs, Inventory, Config, History]:
     if not table.table_exists():
         table.create_table()
 

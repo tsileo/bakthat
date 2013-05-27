@@ -101,7 +101,7 @@ Excluding files
 
 Bakthat use a ".gitignore style" way to exclude files using Unix shell-style wildcards.
 
-There is two way to exclude file:
+There is two way to exclude files:
 
 - by creating a **.bakthatexclude** file at the root of the directory you want to backup.
 - by specifying a file directly with the ``--exclude-file`` argument.
