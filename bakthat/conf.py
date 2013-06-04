@@ -3,9 +3,12 @@ import yaml
 import os
 import logging
 
+from events import Events
+
 log = logging.getLogger(__name__)
 
 CONFIG_FILE = os.path.expanduser("~/.bakthat.yml")
+PLUGINS_DIR = os.path.expanduser("~/.bakthat_plugins")
 DATABASE = os.path.expanduser("~/.bakthat.sqlite")
 
 DEFAULT_LOCATION = "us-east-1"
@@ -26,3 +29,4 @@ def load_config(config_file=CONFIG_FILE):
 
 # Read default config file
 config = load_config()
+events = Events()

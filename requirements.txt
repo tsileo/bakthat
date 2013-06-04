@@ -8,3 +8,4 @@ byteformat
 pycrypto
 requests
 sh
+events

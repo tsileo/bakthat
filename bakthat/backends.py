@@ -6,6 +6,7 @@ import shelve
 import json
 import socket
 import httplib
+
 import boto
 from boto.s3.key import Key
 import math
@@ -34,7 +35,7 @@ class glacier_shelve(object):
         self.shelve.close()
 
 
-class BakthatBackend:
+class BakthatBackend(object):
     """Handle Configuration for Backends.
 
     The profile is only useful when no conf is None.

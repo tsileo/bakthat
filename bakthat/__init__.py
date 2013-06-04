@@ -22,10 +22,11 @@ import grandfatherson
 from byteformat import ByteFormatter
 
 from bakthat.backends import GlacierBackend, S3Backend, RotationConfig, SwiftBackend
-from bakthat.conf import config, load_config, DEFAULT_DESTINATION, DEFAULT_LOCATION, CONFIG_FILE, EXCLUDE_FILES
+from bakthat.conf import config, events, load_config, DEFAULT_DESTINATION, DEFAULT_LOCATION, CONFIG_FILE, EXCLUDE_FILES
 from bakthat.utils import _interval_string_to_seconds
 from bakthat.models import Backups
 from bakthat.sync import BakSyncer, bakmanager_hook, bakmanager_periodic_backups
+from bakthat.plugin import setup_plugins
 
 __version__ = "0.5.5"
 
@@ -49,6 +50,7 @@ def _get_store_backend(conf, destination=None, profile="default"):
     if not isinstance(conf, dict):
         conf = load_config(conf)
     conf = conf.get(profile)
+    setup_plugins(conf)
     if not destination:
         destination = conf.get("default_destination", DEFAULT_DESTINATION)
     return STORAGE_BACKEND[destination](conf, profile), destination, conf
@@ -92,9 +94,11 @@ def delete_older_than(filename, interval, destination=None, profile="default", c
 
         storage_backend.delete(real_key)
         backup.set_deleted()
-        deleted.append(real_key)
+        deleted.append(backup)
 
     BakSyncer(conf).sync_auto()
+
+    events.on_delete_older_than(deleted)
 
     return deleted
 
@@ -161,12 +165,14 @@ def rotate_backups(filename, destination=None, profile="default", config=CONFIG_
 
                 storage_backend.delete(real_key)
                 backup.set_deleted()
-                deleted.append(real_key)
+                deleted.append(backup)
         except Exception, exc:
             log.error("Error when deleting {0}".format(backup))
             log.exception(exc)
 
     BakSyncer(conf).sync_auto()
+
+    events.on_rotate_backups(deleted)
 
     return deleted
 
@@ -355,9 +361,11 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
     log.debug(backup_data)
 
     # Insert backup metadata in SQLite
-    Backups.create(**backup_data)
+    backup = Backups.create(**backup_data)
 
     BakSyncer(conf).sync_auto()
+
+    events.on_backup(backup)
 
     # bakmanager.io hook, enable with -k/--key paramter
     if backup_key:
@@ -531,15 +539,15 @@ def restore(filename, destination=None, profile="default", config=CONFIG_FILE, *
             with closing(GzipFile(fileobj=out, mode="r")) as f:
                 with open(backup.stored_filename, "w") as out:
                     out.write(f.read())
-
-        return True
     elif out:
         log.info("Backup is not compressed")
         with open(backup.filename, "w") as restored:
             out.seek(0)
             restored.write(out.read())
 
-        return True
+    events.on_restore(backup)
+
+    return True
 
 
 @app.cmd(help="Delete a backup.")
@@ -589,6 +597,8 @@ def delete(filename, destination=None, profile="default", config=CONFIG_FILE, **
     backup.set_deleted()
 
     BakSyncer(conf).sync_auto()
+
+    events.on_delete(backup)
 
     return True
 

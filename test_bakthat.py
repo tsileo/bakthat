@@ -101,7 +101,7 @@ class BakthatTestCase(unittest.TestCase):
 
         key_deleted = test_deleted[0]
 
-        self.assertEqual(key_deleted, backup_res["stored_filename"])
+        self.assertEqual(key_deleted.stored_filename, backup_res["stored_filename"])
 
         #self.assertEqual(bakthat.match_filename(self.test_filename), [])
 
