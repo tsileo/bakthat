@@ -1,9 +1,10 @@
-from bakthat.plugin import Plugin
-
 import time
+
+from bakthat.plugin import Plugin
 
 
 class TestPlugin(Plugin):
+    """ A basic plugin implementation. """
     def activate(self):
         self.start = {}
         self.stop = {}

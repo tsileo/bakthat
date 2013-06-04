@@ -19,6 +19,7 @@ Here are some features:
 * Delete older than, and `Grandfather-father-son backup rotation <http://en.wikipedia.org/wiki/Backup_rotation_scheme#Grandfather-father-son>`_ supported
 * Possibility to sync backups database between multiple clients via a centralized server
 * Exclude files using .gitignore like file
+* Extendable with plugins
 
 You can restore backups **with** or **without** bakthat, you just have to download the backup, decrypt it with `Beefish <http://pypi.python.org/pypi/beefish>`_ command-line tool and untar it.
 
