@@ -5,6 +5,10 @@ import hashlib
 import json
 import sqlite3
 import os
+import requests
+import logging
+
+log = logging.getLogger(__name__)
 
 database = peewee.SqliteDatabase(DATABASE)
 
@@ -29,40 +33,6 @@ class BaseModel(peewee.Model):
 class SyncedModel(peewee.Model):
     class Meta:
         database = database
-
-    @classmethod
-    def create(cls, **attributes):
-        if cls._meta.name != "history":
-            History.create(data=json.dumps(dict(**attributes)),
-                           ts=int(datetime.utcnow().strftime("%s")),
-                           action="create",
-                           model=cls._meta.name,
-                           pk=attributes.get(cls.Sync.pk))
-        return super(SyncedModel, cls).create(**attributes)
-
-    def delete_instance(self):
-        if self._meta.name != "history":
-            History.create(data={},
-                           ts=int(datetime.utcnow().strftime("%s")),
-                           action="delete",
-                           model=self._meta.name,
-                           pk=self._data.get(self.Sync.pk))
-        return super(SyncedModel, self).delete_instance(self)
-
-    @classmethod
-    def sync(cls):
-        # Gere les 2 dates de derniere sync
-        # 1. PUSH
-        for history in History.select().where(History.model == cls._meta.name,
-                                              History.ts > 0):
-            if history.action == "create":
-                print "create", history.pk
-            elif history.action == "delete":
-                print "delete", history.pk
-        #add clientHistoryItem to server History table
-        # 2. PULL
-        # Faire l'appel a eve
-        return
 
 
 class History(BaseModel):

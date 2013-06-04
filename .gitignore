@@ -1,4 +1,5 @@
 *.pyc
+*wip.py
 build/
 dist/
 bakthat.egg-info/
