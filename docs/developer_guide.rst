@@ -35,6 +35,128 @@ You can access low level API (the same used when using bakthat in command line m
     # restore in the current working directory
     bakthat.restore("bak", conf=bakthat_conf)
 
+
+Event Hooks
+~~~~~~~~~~~
+
+.. versionadded:: 0.5.0
+
+You can configure hook to be executed on the following events:
+
+* before_backup
+* on_backup
+* before_restore
+* on_restore
+* before_delete
+* on_delete
+* before_delete_older_than
+* on_delete_older_than
+* before_rotate_backups
+* on_rotate_backups
+
+So, **before_** events are executed at the beginning of the action, and **on_** events are executed just before the end.
+
+For each action, a **session_id** (an uuid4) is assigned, so you can match up **before_** and **on_** events.
+
+Every callback receive the session_id as first argument, and for **on_** callbacks, you can retrieve the result of the function, most of the time a Backup object or a list of Backup object, depending of the context.
+
+.. code-block:: python
+
+    from bakthat import backup, events
+
+    def before_backup_callback(session_id):
+        print session_id, "before_backup"
+
+    def on_backup_callback(session_id, backup):
+        print session_id, "on_backup", backup
+
+    events.before_backup += before_backup_callback
+    events.on_backup += on_backup_callback
+
+    bakthat.backup("/home/thomas/mydir")
+
+
+Bakthat makes use of `Events <https://github.com/nicolaiarocci/events>`_ to handle all the "event things".
+
+Plugins
+-------
+
+.. versionadded:: 0.5.0
+
+You can create plugins to extend bakthat features, all you need to do is to subclass ``bakthat.plugin.Plugin`` and implement an ``activate`` (and optionally ``deactivate``, executed just before exiting) method.
+
+By default, plugins are stored in **~/.bakthat_plugins/** by default, but you can change the plugins location by setting the ``plugins_dir`` setting.
+
+.. code-block:: yaml
+
+    default:
+      plugins_dir: /home/thomas/.bakthat_plugins
+
+
+And to enable plugins, add it to the ``plugins`` array:
+
+.. code-block:: yaml
+
+    default:
+      plugins: [test_plugin.TestPlugin, filename.MyPlugin]
+
+
+You can access **raw profile configuration** using ``self.conf``, and **bakthat logger** using ``self.log`` (e.g. ``self.log.info("hello")``) and in any methods.
+You can also hook events directly on ``self``, like ``self.on_backup += mycallback``.
+
+Here is a basic plugin example, a ``TimerPlugin`` in **test_plugin.py**:
+
+.. code-block:: python
+
+    import time
+    from bakthat.plugin import Plugin
+
+    class TestPlugin(Plugin):
+        def activate(self):
+            self.start = {}
+            self.stop = {}
+            self.before_backup += self.before_backup_callback
+            self.on_backup += self.on_backup_callback
+
+        def before_backup_callback(self, session_id):
+            self.start[session_id] = time.time()
+            self.log.info("before_backup {0}".format(session_id))
+
+        def on_backup_callback(self, session_id, backup):
+            self.stop[session_id] = time.time()
+            self.log.info("on_backup {0} {1}".format(session_id, backup))
+            self.log.info("Job duration: {0}s".format(self.stop[session_id] - self.start[session_id]))
+
+
+Now, we can enable it:
+
+.. code-block:: yaml
+
+    default:
+      plugins: [test_plugin.TestPlugin]
+
+
+Finally, we can check that our plugin is actually working:
+
+::
+
+    $ bakthat backup mydir
+    before_backup 4028dfc7-7a17-4a99-b3fe-88f6e4879bda
+    Backing up /home/thomas/mydir
+    Password (blank to disable encryption): 
+    Compressing...
+    Uploading...
+    Upload completion: 0%
+    Upload completion: 100%
+    Upload completion: 0%
+    Upload completion: 100%
+    on_backup 4028dfc7-7a17-4a99-b3fe-88f6e4879bda <Backup: mydir.20130604191055.tgz>
+    Job duration: 4.34407806396s
+
+
+See **Event Hooks** for more informations and `Events <https://github.com/nicolaiarocci/events>`_ documentation.
+
+
 Helpers
 -------
 
@@ -145,9 +267,6 @@ You can also use it like a normal class:
     bh.backup("myfile.txt")
     bh.rotate("myfile.txt")
 
-.. seealso::
-
-    If you use bakthat to perform periodic backups, you may want to check out :ref:`bakmanager-integration`.
 
 Create a MySQL backup script with BakHelper
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

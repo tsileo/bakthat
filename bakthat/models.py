@@ -60,6 +60,9 @@ class Backups(SyncedModel):
     stored_filename = peewee.TextField(index=True, unique=True)
     tags = peewee.CharField()
 
+    def __repr__(self):
+        return "<Backup: {0}>".format(self._data.get("stored_filename"))
+
     @classmethod
     def match_filename(cls, filename, destination, **kwargs):
         conf = config

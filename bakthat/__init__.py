@@ -6,6 +6,7 @@ from datetime import datetime
 from getpass import getpass
 import logging
 import hashlib
+import uuid
 import socket
 import re
 import fnmatch
@@ -26,13 +27,13 @@ from bakthat.conf import config, events, load_config, DEFAULT_DESTINATION, DEFAU
 from bakthat.utils import _interval_string_to_seconds
 from bakthat.models import Backups
 from bakthat.sync import BakSyncer, bakmanager_hook, bakmanager_periodic_backups
-from bakthat.plugin import setup_plugins
+from bakthat.plugin import setup_plugins, plugin_setup
 
 __version__ = "0.5.5"
 
 app = aaargh.App(description="Compress, encrypt and upload files directly to Amazon S3/Glacier/Swift.")
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("bakthat")
 
 
 class BakthatFilter(logging.Filter):
@@ -62,7 +63,7 @@ def _get_store_backend(conf, destination=None, profile="default"):
 @app.cmd_arg('-d', '--destination', type=str, help="s3|glacier|swift", default=None)
 @app.cmd_arg('-p', '--profile', type=str, default="default", help="profile name (default by default)")
 @app.cmd_arg('-c', '--config', type=str, default=CONFIG_FILE, help="path to config file")
-def delete_older_than(filename, interval, destination=None, profile="default", config=CONFIG_FILE, **kwargs):
+def delete_older_than(filename, interval, profile="default", config=CONFIG_FILE, destination=None, **kwargs):
     """Delete backups matching the given filename older than the given interval string.
 
     :type filename: str
@@ -83,6 +84,10 @@ def delete_older_than(filename, interval, destination=None, profile="default", c
 
     """
     storage_backend, destination, conf = _get_store_backend(config, destination, profile)
+
+    session_id = str(uuid.uuid4())
+    events.before_delete_older_than(session_id)
+
     interval_seconds = _interval_string_to_seconds(interval)
 
     deleted = []
@@ -96,9 +101,7 @@ def delete_older_than(filename, interval, destination=None, profile="default", c
         backup.set_deleted()
         deleted.append(backup)
 
-    BakSyncer(conf).sync_auto()
-
-    events.on_delete_older_than(deleted)
+    events.on_delete_older_than(session_id, deleted)
 
     return deleted
 
@@ -141,6 +144,9 @@ def rotate_backups(filename, destination=None, profile="default", config=CONFIG_
     if not rotate:
         raise Exception("You must run bakthat configure_backups_rotation or provide rotation configuration.")
 
+    session_id = str(uuid.uuid4())
+    events.before_rotate_backups(session_id)
+
     deleted = []
 
     backups = Backups.search(filename, destination, profile=profile, config=config)
@@ -170,9 +176,7 @@ def rotate_backups(filename, destination=None, profile="default", config=CONFIG_
             log.error("Error when deleting {0}".format(backup))
             log.exception(exc)
 
-    BakSyncer(conf).sync_auto()
-
-    events.on_rotate_backups(deleted)
+    events.on_rotate_backups(session_id, deleted)
 
     return deleted
 
@@ -208,7 +212,7 @@ def _get_exclude(exclude_file):
 @app.cmd_arg('-k', '--key', type=str, default=None, help="Custom key for periodic backups (works only with BakManager.io hook.)")
 @app.cmd_arg('--exclude-file', type=str, default=None)
 @app.cmd_arg('--s3-reduced-redundancy', action="store_true")
-def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profile="default", config=CONFIG_FILE, key=None, exclude_file=None, s3_reduced_redundancy=False, **kwargs):
+def backup(filename=os.getcwd(), destination=None, profile="default", config=CONFIG_FILE, prompt="yes", tags=[], key=None, exclude_file=None, s3_reduced_redundancy=False, **kwargs):
     """Perform backup.
 
     :type filename: str
@@ -240,6 +244,9 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
     """
     storage_backend, destination, conf = _get_store_backend(config, destination, profile)
     backup_file_fmt = "{0}.{1}.tgz"
+
+    session_id = str(uuid.uuid4())
+    events.before_backup(session_id)
 
     # Check if compression is disabled on the configuration.
     if conf:
@@ -365,13 +372,13 @@ def backup(filename=os.getcwd(), destination=None, prompt="yes", tags=[], profil
 
     BakSyncer(conf).sync_auto()
 
-    events.on_backup(backup)
-
     # bakmanager.io hook, enable with -k/--key paramter
     if backup_key:
         bakmanager_hook(conf, backup_data, backup_key)
 
-    return backup_data
+    events.on_backup(session_id, backup)
+
+    return backup
 
 
 @app.cmd(help="Show backups list.")
@@ -500,6 +507,9 @@ def restore(filename, destination=None, profile="default", config=CONFIG_FILE, *
         log.error("No file matched.")
         return
 
+    session_id = str(uuid.uuid4())
+    events.before_restore(session_id)
+
     key_name = backup.stored_filename
     log.info("Restoring " + key_name)
 
@@ -545,9 +555,9 @@ def restore(filename, destination=None, profile="default", config=CONFIG_FILE, *
             out.seek(0)
             restored.write(out.read())
 
-    events.on_restore(backup)
+    events.on_restore(session_id, backup)
 
-    return True
+    return backup
 
 
 @app.cmd(help="Delete a backup.")
@@ -591,16 +601,17 @@ def delete(filename, destination=None, profile="default", config=CONFIG_FILE, **
 
     storage_backend, destination, conf = _get_store_backend(config, destination, profile)
 
+    session_id = str(uuid.uuid4())
+    events.before_delete(session_id)
+
     log.info("Deleting {0}".format(key_name))
 
     storage_backend.delete(key_name)
     backup.set_deleted()
 
-    BakSyncer(conf).sync_auto()
+    events.on_delete(session_id, backup)
 
-    events.on_delete(backup)
-
-    return True
+    return backup
 
 
 @app.cmd(help="Periodic backups status (bakmanager.io API)")

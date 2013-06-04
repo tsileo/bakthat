@@ -91,17 +91,17 @@ class BakthatTestCase(unittest.TestCase):
 
         os.remove(self.test_filename)
 
-        test_deleted = bakthat.delete_older_than(self.test_filename, "1Y", "s3")
+        test_deleted = bakthat.delete_older_than(self.test_filename, "1Y", destination="s3")
 
         self.assertEqual(test_deleted, [])
 
         time.sleep(10)
 
-        test_deleted = bakthat.delete_older_than(self.test_filename, "9s", "s3")
+        test_deleted = bakthat.delete_older_than(self.test_filename, "9s", destination="s3")
 
         key_deleted = test_deleted[0]
 
-        self.assertEqual(key_deleted.stored_filename, backup_res["stored_filename"])
+        self.assertEqual(key_deleted.stored_filename, backup_res.stored_filename)
 
         #self.assertEqual(bakthat.match_filename(self.test_filename), [])
 
