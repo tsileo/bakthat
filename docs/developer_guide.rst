@@ -85,6 +85,11 @@ Plugins
 
 You can create plugins to extend bakthat features, all you need to do is to subclass ``bakthat.plugin.Plugin`` and implement an ``activate`` (and optionally ``deactivate``, executed just before exiting) method.
 
+.. note::
+
+    For now, you can create new command yet, maybe in the future.
+
+
 By default, plugins are stored in **~/.bakthat_plugins/** by default, but you can change the plugins location by setting the ``plugins_dir`` setting.
 
 .. code-block:: yaml
@@ -103,6 +108,9 @@ And to enable plugins, add it to the ``plugins`` array:
 
 You can access **raw profile configuration** using ``self.conf``, and **bakthat logger** using ``self.log`` (e.g. ``self.log.info("hello")``) and in any methods.
 You can also hook events directly on ``self``, like ``self.on_backup += mycallback``.
+
+Your First Plugin
+~~~~~~~~~~~~~~~~~
 
 Here is a basic plugin example, a ``TimerPlugin`` in **test_plugin.py**:
 
@@ -153,57 +161,41 @@ Finally, we can check that our plugin is actually working:
     on_backup 4028dfc7-7a17-4a99-b3fe-88f6e4879bda <Backup: mydir.20130604191055.tgz>
     Job duration: 4.34407806396s
 
+Monkey Patching
+~~~~~~~~~~~~~~~
+
+With plugin, you have the ability to extend or modify everything in the ``activate function``.
+
+Here is an example, which update the ``Backups`` model at runtime:
+
+.. code-block:: python
+
+    from bakthat.plugin import Plugin
+    from bakthat.models import Backups
+
+
+    class MyBackups(Backups):
+        @classmethod
+        def my_custom_method(self):
+            return True
+
+
+    class ChangeModelPlugin(Plugin):
+        """ A basic plugin implementation. """
+        def activate(self):
+            global Backups
+            self.log.info("Replace Backups")
+            Backups = MyBackups
+
+
+More on event hooks
+~~~~~~~~~~~~~~~~~~~
 
 See **Event Hooks** for more informations and `Events <https://github.com/nicolaiarocci/events>`_ documentation.
 
 
 Helpers
 -------
-
-.. _keyvalue:
-
-KeyValue
-~~~~~~~~
-
-.. versionadded:: 0.4.5
-
-KeyValue is a simple "key value store" that allows you to quickly store/retrieve strings/objects on Amazon S3.
-All values are serialized with json, so **you can directly backup any json serializable value**.
-
-It can also takes care of compressing (with gzip) and encrypting (optionnal).
-
-Compression in enabled by default, you can disable it by passing compress=False when setting a key.
-
-Also, backups stored with KeyValue can be restored with bakthat restore and show up in bakthat show.
-
-.. code-block:: python
-
-    from bakthat.helper import KeyValue
-    import json
-
-    bakthat_conf = {'access_key': 'YOURACCESSKEY',
-                    'secret_key': 'YOURSECRETKEY',
-                    'glacier_vault': 'yourvault',
-                    's3_bucket': 'yours3bucket',
-                    'region_name': 'es-east-1'}
-
-    kv = KeyValue(conf=bakthat_conf)
-
-    mydata = {"some": "data"}
-    kv.set_key("mykey", mydata)
-
-    mydata_restored = kv.get_key("mykey")
-
-    data_url = kv.get_key_url("mykey", 60)  # url expires in 60 secondes
-
-    kv.delete_key("mykey")
-
-    kv.set_key("my_encrypted_key", "myvalue", password="mypassword")
-    kv.get_key("my_encrypted_key", password="mypassword")
-
-    # You can also disable gzip compression if you want:
-    kv.set_key("my_non_compressed_key", {"my": "data"}, compress=False)
-
 
 BakHelper
 ~~~~~~~~~
@@ -297,6 +289,51 @@ Here is a MySQL backup script, it makes use of `sh <http://amoffat.github.com/sh
                     _out="dump.sql")
         bh.backup()
         bh.rotate()
+
+
+.. _keyvalue:
+
+KeyValue
+~~~~~~~~
+
+.. versionadded:: 0.4.5
+
+KeyValue is a simple "key value store" that allows you to quickly store/retrieve strings/objects on Amazon S3.
+All values are serialized with json, so **you can directly backup any json serializable value**.
+
+It can also takes care of compressing (with gzip) and encrypting (optionnal).
+
+Compression in enabled by default, you can disable it by passing compress=False when setting a key.
+
+Also, backups stored with KeyValue can be restored with bakthat restore and show up in bakthat show.
+
+.. code-block:: python
+
+    from bakthat.helper import KeyValue
+    import json
+
+    bakthat_conf = {'access_key': 'YOURACCESSKEY',
+                    'secret_key': 'YOURSECRETKEY',
+                    'glacier_vault': 'yourvault',
+                    's3_bucket': 'yours3bucket',
+                    'region_name': 'es-east-1'}
+
+    kv = KeyValue(conf=bakthat_conf)
+
+    mydata = {"some": "data"}
+    kv.set_key("mykey", mydata)
+
+    mydata_restored = kv.get_key("mykey")
+
+    data_url = kv.get_key_url("mykey", 60)  # url expires in 60 secondes
+
+    kv.delete_key("mykey")
+
+    kv.set_key("my_encrypted_key", "myvalue", password="mypassword")
+    kv.get_key("my_encrypted_key", password="mypassword")
+
+    # You can also disable gzip compression if you want:
+    kv.set_key("my_non_compressed_key", {"my": "data"}, compress=False)
 
 
 Accessing bakthat SQLite database
