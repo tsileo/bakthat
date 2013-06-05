@@ -39,7 +39,7 @@ You can access low level API (the same used when using bakthat in command line m
 Event Hooks
 ~~~~~~~~~~~
 
-.. versionadded:: 0.5.0
+.. versionadded:: 0.6.0
 
 You can configure hook to be executed on the following events:
 
@@ -81,9 +81,11 @@ Bakthat makes use of `Events <https://github.com/nicolaiarocci/events>`_ to hand
 Plugins
 -------
 
-.. versionadded:: 0.5.0
+.. versionadded:: 0.6.0
 
 You can create plugins to extend bakthat features, all you need to do is to subclass ``bakthat.plugin.Plugin`` and implement an ``activate`` (and optionally ``deactivate``, executed just before exiting) method.
+
+The ``activate`` and ``deactivate`` method is called only once. ``activate`` is called when the plugin is initialized, and ``deactivate`` (you can see it like a cleanup function) is called at exit.
 
 .. note::
 

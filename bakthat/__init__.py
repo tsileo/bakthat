@@ -29,7 +29,7 @@ from bakthat.models import Backups
 from bakthat.sync import BakSyncer, bakmanager_hook, bakmanager_periodic_backups
 from bakthat.plugin import setup_plugins, plugin_setup
 
-__version__ = "0.5.5"
+__version__ = "0.6.0"
 
 app = aaargh.App(description="Compress, encrypt and upload files directly to Amazon S3/Glacier/Swift.")
 

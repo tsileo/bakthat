@@ -88,6 +88,14 @@ Bakthat Python API
 Changelog
 ---------
 
+0.6.0
+~~~~~
+
+**June 5 2013**
+
+- Event hooks handling
+- Support for plugin
+
 0.5.5
 ~~~~~
 
