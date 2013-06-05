@@ -89,7 +89,7 @@ The ``activate`` and ``deactivate`` method is called only once. ``activate`` is
 
 .. note::
 
-    For now, you can create new command yet, maybe in the future.
+    For now, you can't create new command yet with plugin (maybe in the future).
 
 
 By default, plugins are stored in **~/.bakthat_plugins/** by default, but you can change the plugins location by setting the ``plugins_dir`` setting.
