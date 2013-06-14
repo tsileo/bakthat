@@ -46,6 +46,7 @@ Bakthat requirements are automatically installed when installing bakthat, but if
 * `pyyaml <http://pyyaml.org>`_
 * `sh <http://amoffat.github.com/sh/>`_
 * `requests <http://docs.python-requests.org>`_
+* `events <https://events.readthedocs.org>`_
 
 If you want to use OpenStack Swift, following additional packages are also required.
 
