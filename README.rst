@@ -88,6 +88,17 @@ Bakthat Python API
 Changelog
 ---------
 
+0.7.0
+~~~~~
+
+**Not released yet**, developed in the **develop** branch.
+
+- Incremental backups support, with `Incremental-Backups-Tools <https://github.com/tsileo/incremental-backups-tools>`_.
+- Revamped configuration handling
+- Stronger unit tests
+- Plugin architecture improved
+- Switch from aaargh to cliff for the CLI handling
+
 0.6.0
 ~~~~~
 
