@@ -10,10 +10,23 @@ import requests
 import logging
 import uuid
 
-from eve.utils import document_etag
-
-
 log = logging.getLogger(__name__)
+
+
+class ExcludeFilter(logging.Filter):
+    def filter(self, rec):
+        if rec.name.startswith(__name__) or rec.name == "root":
+            return True
+        else:
+            return rec.levelno >= logging.WARNING
+
+handler = logging.StreamHandler()
+handler.addFilter(ExcludeFilter())
+handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s: %(message)s'))
+log.addHandler(handler)
+log.setLevel(logging.INFO)
+
+
 import time
 DATABASEDEV = os.path.expanduser("~/.bakthat.sqlitedev{0}".format(time.time()))
 database = peewee.SqliteDatabase(DATABASEDEV)
@@ -22,6 +35,8 @@ api_resource = "http://localhost:2404/api/{0}/{1}/".format
 
 
 def get_remote_history(model, last_sync=0):
+    """ Fetch the remote history over the API since last sync. """
+    log.info("Fetching remote history since {0}".format(last_sync))
     r = requests.get(api_root('history'),
                      params={"where": json.dumps({"ts": {"$gt": last_sync},
                                                   "model": model})})
@@ -30,31 +45,35 @@ def get_remote_history(model, last_sync=0):
 
 
 def delete_resource(model, pk, etag, raw_history=None):
-    # TODO delete data
+    """ Delete a resource. """
+    log.info("Deleting resource {0} {1} (etag={2}, history={3}".format(model, pk, etag, raw_history))
     r = requests.delete(api_resource(model, pk),
                         headers={"If-Match": etag})
     r.raise_for_status()
     resp = r.json()
-    log.debug(resp)
+    log.info(resp)
     if resp.get("status") == "OK":
         del raw_history["id"]
         raw_history["ts"] = int(datetime.utcnow().strftime("%s"))
         post_resource("history", raw_history.get("uuid"), json.dumps(raw_history))
+        return True
     elif resp.get("status") != "OK":
         log.error("Issue deleting: {0} <{1}>".format(model, pk))
         for issue in resp["issues"]:
             log.error(issue)
+        return False
 
 
 def patch_resource(model, pk, update, etag, raw_history=None):
     """ Patch a resource. """
+    log.info("Patching {0} {1}: {2} (etag={3}, history={4}".format(model, pk, update, etag, raw_history))
     payload = {"data": update}
     r = requests.patch(api_resource(model, pk),
                        payload,
                        headers={"If-Match": etag})
     r.raise_for_status()
     resp = r.json().get("data")
-    log.debug(resp)
+    log.info(resp)
     if resp.get("status") == "OK":
         if model != "history" and raw_history is not None:
             # Call post_resource itself for the history
@@ -71,9 +90,13 @@ def patch_resource(model, pk, update, etag, raw_history=None):
 
 
 def post_resource(model, pk, data, raw_history=None):
-    """ Create a resource,
-    but verify if it doesn't exist yet before.
+    """ Create a resource, but verify if it doesn't exist yet before.
+    Also user to POST history to the API.
+
+    :return: resource ETag if successful, None if any error.
+
     """
+    log.info("Posting {0} {1}: {2} (history={3}".format(model, pk, data, raw_history))
     call_url = api_resource(model, pk)
     r = requests.get(call_url)
     if r.status_code == 404:
@@ -83,7 +106,7 @@ def post_resource(model, pk, data, raw_history=None):
         #try:
         r.raise_for_status()
         resp = r.json().get("item")
-        log.debug(resp)
+        log.info(resp)
         if resp.get("status") == "OK":
             if model != "history" and raw_history is not None:
                 etag = resp.get("etag")
@@ -99,15 +122,20 @@ def post_resource(model, pk, data, raw_history=None):
                 log.error(issue)
         elif resp.get("status") != "OK":
             log.error("Issue posting {0}: {1}".format(payload, resp))
-        #except Exception, exc:
-        #    log.exception(exc)
 
 
 def get_resource(model, pk):
+    """ Perform a GET request over a resource. """
+    log.info("GET {0} {1}".format(model, pk))
     call_url = api_resource(model, pk)
     r = requests.get(call_url)
     r.raise_for_status()
-    return r.json()
+    data = r.json()
+    del data["_id"]
+    del data["_links"]
+    del data["created"]
+    del data["updated"]
+    return data
 
 
 class JsonField(peewee.CharField):
@@ -128,6 +156,9 @@ class BaseModel(peewee.Model):
 
 
 class SyncedModel(peewee.Model):
+    """ A base model to sync a peewee Model over a Eve REST API.
+    Synchronization is history based, and works with multiple clients.
+    """
     class Meta:
         database = database
 
@@ -163,7 +194,8 @@ class SyncedModel(peewee.Model):
         return super(SyncedModel, self).delete_instance(self)
 
     @classmethod
-    def get_pk(cls, pk):
+    def get_by_pk(cls, pk):
+        """ Try to get a model from its primary key. """
         try:
             return cls.get(getattr(cls, cls.Sync.pk) == pk)
         except cls.DoesNotExist:
@@ -171,8 +203,14 @@ class SyncedModel(peewee.Model):
 
     @classmethod
     def sync(cls, debug=False):
+        cls.sync_push(debug)
+        cls.sync_pull(debug)
+
+    @classmethod
+    def sync_push(cls, debug=False):
+        """ Process the local History and perform calls to the API. """
         # 1. PUSH
-        last_sync = Config.get_key("last_dev_eve_sync", 0)
+        last_sync = Config.get_key("last_dev_eve_sync_push", 0)
         for history in History.select().where(History.model == cls._meta.name,
                                               History.ts > last_sync):
             print "local history", history
@@ -186,10 +224,16 @@ class SyncedModel(peewee.Model):
             elif history.action == "delete":
                 etag = ETag.get_etag(history.model, history.pk)
                 delete_resource(history.model, history.pk, etag, raw_history=history._data)
+        Config.set_key('last_dev_eve_sync_push', int(datetime.utcnow().strftime("%s")))
+
+    @classmethod
+    def sync_pull(cls, debug=False):
+        last_sync = Config.get_key("last_dev_eve_sync_pull", 0)
         # 2. PULL
-        for history in get_remote_history(cls._meta.name, last_sync):
+        remote_history = get_remote_history(cls._meta.name, last_sync)
+        for history in remote_history:
             print "remote history", history
-            local = cls.get_pk(history["pk"])
+            local = cls.get_by_pk(history["pk"])
             if history["action"] == "create":
                 if not local:
                     print "create from remote"
@@ -212,7 +256,7 @@ class SyncedModel(peewee.Model):
                 else:
                     print "item doesn't exists !"
 
-        Config.set_key('last_dev_eve_sync', int(datetime.utcnow().strftime("%s")))
+        Config.set_key('last_dev_eve_sync_pull', int(datetime.utcnow().strftime("%s")))
         # Faire l'appel a eve
         # ne pas oublier d'updater ETag
 
@@ -224,7 +268,6 @@ class SyncedModel(peewee.Model):
         # TODO => tampon/buffer au cas ou API pas disponible
         # TODO => Ajouter des if debug: partout
         # TODO => tester le pk dans Meta au lieu de Sync
-        return
 
 
 class History(BaseModel):
@@ -492,7 +535,7 @@ import time
 time.sleep(1)"""
 print
 print [h._data for h in History.select()]
-#print Backups.get_pk('ooomg.20130527134546.tgz')
+#print Backups.get_by_pk('ooomg.20130527134546.tgz')
 print Backups.sync()
 time.sleep(0.5)
 print [h._data for h in History.select()]
