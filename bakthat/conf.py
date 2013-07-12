@@ -10,11 +10,14 @@ log = logging.getLogger(__name__)
 CONFIG_FILE = os.path.expanduser("~/.bakthat.yml")
 PLUGINS_DIR = os.path.expanduser("~/.bakthat_plugins")
 DATABASE = os.path.expanduser("~/.bakthat.sqlite")
+CACHE_PATH = os.path.expanduser('~/.cache/bakthat/')
 
 DEFAULT_LOCATION = "us-east-1"
 DEFAULT_DESTINATION = "s3"
 
 EXCLUDE_FILES = [".bakthatexclude", ".gitignore"]
+
+FILENAME_DATE_FMT = '%Y-%m-%dT%H:%M:%S'
 
 
 def load_config(config_file=CONFIG_FILE):
