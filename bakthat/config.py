@@ -16,17 +16,22 @@ class Config(object):
 
     def init(self, data={}):
         """ Initialize the config with a dict. """
-        self.data = data
+        self.__dict__['data'] = data
 
     def init_from_file(self, name=None, fileobj=None):
         if not fileobj:
             fileobj = open(name, 'rb')
-        self.data = yaml.load(fileobj)
+        self.__dict__['data'] = yaml.load(fileobj)
 
     def __getattr__(self, attr):
         if not self.data:
             raise AttributeError('Config is not initialized yet.')
-        return self.data.get(attr)
+        return self.__dict__['data'].get(attr)
+
+    def __getitem__(self, val):
+        """ To allow dict like access e.g. conf['key'] """
+        return self.__getattr__(val)
 
     def __setattr__(self, attr, value):
-        raise AttributeError('Cannot set attribute on Config.')
+        if attr != 'data':
+            raise AttributeError('Cannot set attribute on Config.')
