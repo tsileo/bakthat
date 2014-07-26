@@ -2,7 +2,7 @@
 Bakthat
 =======
 
-**I stopped working on bakthat, I'm now working on another backup-related project: `blobstash <https://github.com/tsileo/blobstash>`_/`blobsnap <https://github.com/tsileo/blobsnap>`_.**
+I stopped working on bakthat, I'm now working on another backup-related project: `blobstash <https://github.com/tsileo/blobstash>`_/`blobsnap <https://github.com/tsileo/blobsnap>`_.
 If somebody want to be a collaborator and continue development, please open an issue.
 
 Bakthat is a MIT licensed backup framework written in Python, it's both a command line tool and a Python module that helps you manage backups on Amazon `S3 <http://aws.amazon.com/s3/>`_/`Glacier <http://aws.amazon.com/glacier/>`_ and OpenStack `Swift <http://swift.openstack.org>`_. It automatically compress, encrypt (symmetric encryption) and upload your files.
